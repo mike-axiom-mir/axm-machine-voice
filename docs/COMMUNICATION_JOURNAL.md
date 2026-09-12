@@ -45,6 +45,8 @@ Run the same state again with the same journal and the journal's prior fingerpri
 
 `no_candidate`, `rejected`, and invalid inputs are not appended as emissions.
 
+Every emitted `event_id` is unique within one journal so a later response has one unambiguous communication target.
+
 ## Structured response
 
 After an event was emitted:
@@ -61,7 +63,9 @@ A response can only reference an event id that already exists as an `emission` r
 
 The action string is intentionally open. A future human, AI, game, or machine can use bounded actions appropriate to its interaction without rewriting old journal records.
 
-## Tamper-evident chain
+The `actor` field is a structured identity reference supplied by the caller. v0.1 does **not** authenticate that the claimed actor really produced the response.
+
+## Hash-linked integrity chain
 
 Every record contains:
 
@@ -77,15 +81,18 @@ The hash covers the entire record payload before `record_hash` is added. Reading
 - record schema;
 - contiguous sequence;
 - previous-hash linkage;
-- record hash.
+- record hash;
+- unique emitted event ids.
 
-Editing or reordering an existing retained record breaks validation.
+This reliably catches accidental corruption, reordering, and edits where the hashes were not recomputed.
 
 ### Important truth boundary
 
-This is **tamper-evident, not tamper-proof**.
+This is **not cryptographic authentication against a writer with full file access**.
 
-An intact tail can be deleted from a purely local file and the surviving prefix can still validate. Detecting tail deletion requires an external checkpoint/root hash stored somewhere outside that journal. v0.1 does not claim otherwise.
+The chain uses ordinary unkeyed hashes. Someone able to rewrite the whole journal can also recompute those hashes. An intact tail can likewise be deleted while leaving the surviving prefix internally valid.
+
+Stronger malicious-tamper or tail-deletion detection requires something outside this local journal, for example an externally anchored checkpoint/root hash, a signature, or another trusted state layer. v0.1 does not claim that protection.
 
 ## Writer model
 
@@ -99,10 +106,12 @@ The journal does not:
 
 - make a packet true because it was emitted;
 - make a response correct because someone recorded it;
+- authenticate a claimed response actor;
 - convert silence into communication;
 - infer why an actor responded;
 - grant authority to the speaker or responder;
 - prove an intact tail was never deleted;
+- prove that a malicious writer could not rewrite and re-hash the complete local file;
 - silently repair a corrupted chain.
 
 If journal validation fails, journal-aware communication fails closed rather than discarding history and speaking as though nothing was previously emitted.
