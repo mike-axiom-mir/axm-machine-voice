@@ -45,7 +45,7 @@ Run all tests with:
 python -m unittest discover -s tests -v
 ```
 
-## Five grounded reasons to speak
+## Seven grounded reasons to speak
 
 ### `There is another way.`
 
@@ -144,11 +144,48 @@ python examples/run_residual_producer.py
 
 See [`docs/RESIDUAL_LOOK_PRODUCER.md`](docs/RESIDUAL_LOOK_PRODUCER.md).
 
+### `This worked.` / `This did not work.`
+
+`produce_criterion_outcome(...)` is one paired producer so success and failure cannot drift onto different definitions.
+
+v0.1 uses one explicit aggregation rule:
+
+```text
+all_required
+```
+
+`This worked.` can surface only when every explicitly required success criterion has a grounded satisfied observation.
+
+`This did not work.` can surface when at least one explicitly required criterion has a grounded failed observation. Other criteria may still be unevaluated because one required failure is already enough to violate an all-required contract.
+
+Partial positive evidence stays silent rather than becoming premature success.
+
+Both outcomes are explicitly bounded to the supplied contract:
+
+```json
+{
+  "global_success_claimed": false,
+  "global_failure_claimed": false,
+  "criteria_contract_authenticity_claimed": false,
+  "criteria_contract_preexistence_authenticated": false
+}
+```
+
+The exact packet contains only the fields relevant to its outcome; the two global flags are shown together here only to summarize the shared boundary.
+
+```bash
+python examples/run_outcome_producer.py
+```
+
+See [`docs/OUTCOME_PRODUCER.md`](docs/OUTCOME_PRODUCER.md).
+
+The outcome producer is intentionally Python/API-only in this lane. A strict outcome snapshot schema should be added only after this paired producer independently survives review and CI.
+
 All bundled producer examples use synthetic state and are not live Machine Floor discoveries.
 
 ## Versioned state snapshot handoff
 
-All five producers use one strict schema-id-routed snapshot transport:
+The first five producers use one strict schema-id-routed snapshot transport:
 
 ```text
 axm-machine-voice/alternative-snapshot/0.1
@@ -250,6 +287,8 @@ Machine Voice does not currently claim:
 - global unavailability from a bounded missing-input inventory;
 - cause or novelty merely because an expected-vs-observed residual exceeds a supplied tolerance;
 - model invalidity or observation invalidity merely because a residual exceeds tolerance;
+- global success or global failure from evaluation against one explicit criteria contract;
+- authenticity, authorship, or pre-attempt timing of a supplied success criteria contract;
 - that a surfaced alternative is correct or canonical;
 - truth of externally supplied evidence merely because it renders;
 - actor authentication by the local page;

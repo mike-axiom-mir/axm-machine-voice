@@ -28,6 +28,7 @@ from .journal import (
     read_journal,
 )
 from .need import AvailableInputState, produce_bounded_need
+from .outcome import CriterionObservation, produce_criterion_outcome
 from .producer import OptionState, produce_lower_cost_alternative
 from .residual import ResidualCheck, produce_residual_look
 from .snapshot import (
@@ -57,6 +58,7 @@ __all__ = [
     "Candidate",
     "Claim",
     "CommunicationKind",
+    "CriterionObservation",
     "FLOORVOICE",
     "GateContext",
     "GateDecision",
@@ -91,6 +93,7 @@ __all__ = [
     "process_unresolved_snapshot",
     "produce_bounded_need",
     "produce_bounded_unresolved",
+    "produce_criterion_outcome",
     "produce_exact_conflict",
     "produce_lower_cost_alternative",
     "produce_residual_look",
