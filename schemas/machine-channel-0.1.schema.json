@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "machine-channel-0.1.schema.json",
+  "title": "AXM Machine Voice Machine Channel v0.1",
+  "oneOf": [
+    {"$ref": "#/$defs/snapshot_outcome"},
+    {"$ref": "#/$defs/recorded"},
+    {"$ref": "#/$defs/invalid"}
+  ],
+  "$defs": {
+    "base": {
+      "type": "object",
+      "required": ["protocol", "status", "reasons", "fingerprint", "packet"],
+      "properties": {
+        "protocol": {"const": "axm-machine-voice/machine-channel/0.1"},
+        "status": {"type": "string"},
+        "reasons": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "fingerprint": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "null"}
+          ]
+        },
+        "packet": {
+          "oneOf": [
+            {"$ref": "statetalk-packet-0.1.schema.json"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "snapshot_outcome": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "type": "object",
+          "properties": {
+            "status": {"enum": ["emitted", "no_candidate", "rejected"]}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "recorded": {
+      "type": "object",
+      "required": ["protocol", "status", "reasons", "fingerprint", "packet", "journal_record"],
+      "properties": {
+        "protocol": {"const": "axm-machine-voice/machine-channel/0.1"},
+        "status": {"const": "recorded"},
+        "reasons": {"type": "array", "maxItems": 0},
+        "fingerprint": {"type": "null"},
+        "packet": {"type": "null"},
+        "journal_record": {
+          "type": "object",
+          "required": ["sequence", "record_hash", "type", "event_id"],
+          "properties": {
+            "sequence": {"type": "integer", "minimum": 1},
+            "record_hash": {"type": "string", "minLength": 1},
+            "type": {"const": "response"},
+            "event_id": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "invalid": {
+      "type": "object",
+      "required": ["protocol", "status", "reasons", "error", "fingerprint", "packet"],
+      "properties": {
+        "protocol": {"const": "axm-machine-voice/machine-channel/0.1"},
+        "status": {"const": "invalid"},
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "error": {"type": "string", "minLength": 1},
+        "fingerprint": {"type": "null"},
+        "packet": {"type": "null"}
+      },
+      "additionalProperties": false
+    }
+  }
+}
