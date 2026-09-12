@@ -94,7 +94,19 @@ It can emit only when at least one check satisfies:
 abs(observed - expected) > tolerance
 ```
 
-Within tolerance, exactly at tolerance, or an empty check set are normal silence. A surfaced packet does not infer cause, novelty, model invalidity, or observation invalidity.
+Within tolerance, exactly at tolerance, or an empty check set are normal silence. A surfaced packet explicitly preserves:
+
+```json
+{
+  "cause": null,
+  "cause_claimed": false,
+  "novelty_claimed": false,
+  "model_invalidity_claimed": false,
+  "observation_invalidity_claimed": false
+}
+```
+
+So transport never turns an exceeded residual into an explanation, novelty claim, model-invalidity claim, or observation-invalidity claim.
 
 ## Criterion outcome snapshot
 
@@ -136,7 +148,7 @@ all_required
 Therefore:
 
 ```text
-all required criteria grounded true  → SUCCESS → This worked.
+all required criteria grounded true   → SUCCESS → This worked.
 any required criterion grounded false → FAILURE → This did not work.
 partial all-positive evidence          → no_candidate silence
 ```
