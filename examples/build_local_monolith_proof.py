@@ -1,9 +1,10 @@
 """Build one offline HTML proof that drives the local renderer through its bridge.
 
 Without `--snapshot`, the packet comes from the synthetic deterministic example.
-With `--snapshot`, the supplied versioned state snapshot is validated, processed by the
-real producer and communication gate, then embedded only when it actually emits.
-Snapshot relevance is checked against independently supplied `--active-ref` values.
+With `--snapshot`, the supplied supported versioned state snapshot is validated, routed
+to its exact producer, passed through the real communication gate, then embedded only
+when it actually emits. Snapshot relevance is checked against independently supplied
+`--active-ref` values.
 
 The proof parent also receives primitive `response-action` messages from the child and
 returns `response-status=received`. It independently checks event id, response id,
@@ -28,7 +29,7 @@ from axm_machine_voice import (  # noqa: E402
     Ref,
     outcome_dict,
     packet_dict,
-    process_alternative_snapshot,
+    process_snapshot,
 )
 from run_deterministic_producer import build_packet  # noqa: E402
 
@@ -47,7 +48,7 @@ def load_snapshot_outcome(path: Path, *, active_refs: tuple[Ref, ...]):
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, Mapping):
         raise ValueError("Snapshot file must contain a JSON object")
-    return process_alternative_snapshot(data, active_refs=active_refs)
+    return process_snapshot(data, active_refs=active_refs)
 
 
 def build_html(
@@ -155,7 +156,7 @@ def main() -> None:
     parser.add_argument(
         "--snapshot",
         type=Path,
-        help="Optional versioned Machine Voice state snapshot JSON. No page is generated if it produces silence/rejection.",
+        help="Optional supported versioned Machine Voice snapshot JSON. No page is generated if it produces silence/rejection.",
     )
     parser.add_argument(
         "--active-ref",
