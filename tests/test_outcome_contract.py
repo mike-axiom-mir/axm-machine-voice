@@ -26,12 +26,26 @@ class CriterionOutcomeContractTests(unittest.TestCase):
             not_claimed,
         )
 
-    def test_readme_exposes_paired_outcome_producer_but_not_snapshot_yet(self):
+    def test_readme_exposes_paired_outcome_producer_and_supported_snapshot(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("produce_criterion_outcome", readme)
         self.assertIn("This worked.", readme)
         self.assertIn("This did not work.", readme)
-        self.assertIn("outcome producer is intentionally Python/API-only in this lane", readme)
+        self.assertIn("axm-machine-voice/outcome-snapshot/0.1", readme)
+        self.assertIn("examples/outcome_snapshot.example.json", readme)
+        self.assertIn("examples/outcome_failure_snapshot.example.json", readme)
+
+        start = readme.index("### `This worked.` / `This did not work.`")
+        section = readme[start:]
+        next_heading = section.find("\n### ", 4)
+        if next_heading != -1:
+            section = section[:next_heading]
+        else:
+            next_major = section.find("\n## ", 4)
+            if next_major != -1:
+                section = section[:next_major]
+        self.assertNotIn("Python/API-only in this lane", section)
+        self.assertIn("criteria_contract_preexistence_authenticated", section)
 
 
 if __name__ == "__main__":

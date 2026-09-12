@@ -15,7 +15,7 @@ The channel is deterministic, local, standard-library-only, and emits exactly on
 One command accepts every explicitly supported snapshot schema:
 
 ```bash
-python machine_voice.py snapshot examples/residual_snapshot.example.json \
+python machine_voice.py snapshot examples/outcome_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
@@ -27,6 +27,7 @@ axm-machine-voice/conflict-snapshot/0.1
 axm-machine-voice/unresolved-snapshot/0.1
 axm-machine-voice/need-snapshot/0.1
 axm-machine-voice/residual-snapshot/0.1
+axm-machine-voice/outcome-snapshot/0.1
 ```
 
 Routing is based only on the explicit `schema` id. Unsupported ids fail closed.
@@ -36,7 +37,7 @@ Snapshots may also be piped over stdin. `--active-ref` stays outside the snapsho
 Repeated `--seen-fingerprint` arguments suppress already-emitted semantics. A communication journal can provide prior fingerprints automatically:
 
 ```bash
-python machine_voice.py snapshot examples/residual_snapshot.example.json \
+python machine_voice.py snapshot examples/outcome_failure_snapshot.example.json \
   --active-ref activity:local-monolith-proof \
   --journal local/communication.jsonl
 ```
@@ -47,7 +48,7 @@ Only newly emitted communication is appended.
 
 ```bash
 python machine_voice.py respond local/communication.jsonl \
-  --event-id residual-snapshot-example-001 \
+  --event-id outcome-snapshot-example-failure-001 \
   --actor human:local-user \
   --action inspect
 ```
@@ -85,12 +86,25 @@ process_conflict_snapshot(...)
 process_unresolved_snapshot(...)
 process_need_snapshot(...)
 process_residual_snapshot(...)
+process_outcome_snapshot(...)
 ```
 
 Journal-aware runtimes can additionally use `append_emission`, `append_response`, `emitted_fingerprints`, and `read_journal`.
 
+## Outcome behavior
+
+The machine channel does not add any success/failure semantics. It transports the paired producer's fixed `all_required` rule:
+
+```text
+complete grounded positive coverage → emitted success
+one grounded failed required criterion → emitted failure
+partial all-positive coverage → no_candidate
+```
+
+The snapshot cannot select a different aggregation rule.
+
 ## Truth boundary
 
-The machine channel does not authenticate snapshot creators or response actors, prove evidence true, choose which side of a conflict is correct, turn a bounded unresolved search into global impossibility, turn a bounded inventory miss into global unavailability, turn a residual into a cause/novelty/model-failure claim, make proposals canonical, execute proposal contents, generate explanatory prose, or convert invalid state into a plausible guess.
+The machine channel does not authenticate snapshot creators or response actors, prove evidence true, choose which side of a conflict is correct, turn a bounded unresolved search into global impossibility, turn a bounded inventory miss into global unavailability, turn a residual into a cause/novelty/model-failure claim, turn criteria-relative success/failure into a global value judgment, authenticate criteria-contract authorship or pre-attempt timing, make proposals canonical, execute proposal contents, generate explanatory prose, or convert invalid state into a plausible guess.
 
 Its job is narrower: preserve one deterministic versioned route from supplied state to canonical Machine Voice output, grounded silence/rejection, or an explicit structured interaction record.

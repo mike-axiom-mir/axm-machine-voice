@@ -6,6 +6,7 @@ from typing import Any, Mapping
 from .conflict import AssertionState, produce_exact_conflict
 from .core import GateContext, GateDecision, Ref, StateTalkPacket, emit, evaluate, packet_dict
 from .need import AvailableInputState, produce_bounded_need
+from .outcome import CriterionObservation, produce_criterion_outcome
 from .producer import OptionState, produce_lower_cost_alternative
 from .residual import ResidualCheck, produce_residual_look
 from .unresolved import AttemptState, produce_bounded_unresolved
@@ -16,6 +17,7 @@ CONFLICT_SNAPSHOT_SCHEMA = "axm-machine-voice/conflict-snapshot/0.1"
 UNRESOLVED_SNAPSHOT_SCHEMA = "axm-machine-voice/unresolved-snapshot/0.1"
 NEED_SNAPSHOT_SCHEMA = "axm-machine-voice/need-snapshot/0.1"
 RESIDUAL_SNAPSHOT_SCHEMA = "axm-machine-voice/residual-snapshot/0.1"
+OUTCOME_SNAPSHOT_SCHEMA = "axm-machine-voice/outcome-snapshot/0.1"
 # Backwards-compatible name used by the original alternative-snapshot API/tests.
 SNAPSHOT_SCHEMA = ALTERNATIVE_SNAPSHOT_SCHEMA
 
@@ -140,6 +142,17 @@ def _residual_check(value: Any, path: str) -> ResidualCheck:
         expected_evidence=_refs(obj["expected_evidence"], f"{path}.expected_evidence"),
         observed_evidence=_refs(obj["observed_evidence"], f"{path}.observed_evidence"),
         tolerance_evidence=_refs(obj["tolerance_evidence"], f"{path}.tolerance_evidence"),
+    )
+
+
+def _criterion_observation(value: Any, path: str) -> CriterionObservation:
+    obj = _mapping(value, path)
+    _exact_keys(obj, {"criterion", "observation", "satisfied", "evidence"}, path)
+    return CriterionObservation(
+        criterion=_ref(obj["criterion"], f"{path}.criterion"),
+        observation=_ref(obj["observation"], f"{path}.observation"),
+        satisfied=obj["satisfied"],
+        evidence=_refs(obj["evidence"], f"{path}.evidence"),
     )
 
 
@@ -468,6 +481,74 @@ def process_residual_snapshot(
     )
 
 
+def process_outcome_snapshot(
+    snapshot: Mapping[str, Any],
+    *,
+    active_refs: tuple[Ref, ...],
+    seen_fingerprints: frozenset[str] = frozenset(),
+) -> SnapshotOutcome:
+    """Validate one criteria-outcome snapshot and run it through producer + gate.
+
+    The snapshot supplies the attempt, all-required criteria contract, and grounded
+    criterion observations. It cannot authenticate contract authorship/timing or redefine
+    the producer's fixed `all_required` aggregation rule.
+    """
+
+    _require_active_refs(active_refs)
+    obj = _mapping(snapshot, "snapshot")
+    expected = {
+        "schema",
+        "event_id",
+        "source",
+        "activity",
+        "attempt",
+        "attempt_evidence",
+        "criteria_contract",
+        "required_criteria",
+        "criteria_evidence",
+        "observations",
+        "next_operations",
+    }
+    _exact_keys(obj, expected, "snapshot")
+
+    schema = _text(obj["schema"], "snapshot.schema")
+    if schema != OUTCOME_SNAPSHOT_SCHEMA:
+        raise ValueError(f"Unsupported snapshot schema: {schema}")
+
+    observations_raw = obj["observations"]
+    if not isinstance(observations_raw, list):
+        raise ValueError("snapshot.observations must be an array")
+
+    source = _ref(obj["source"], "snapshot.source")
+    declared_activity = _ref(obj["activity"], "snapshot.activity")
+    candidate = produce_criterion_outcome(
+        event_id=_text(obj["event_id"], "snapshot.event_id"),
+        source=source,
+        activity=declared_activity,
+        attempt=_ref(obj["attempt"], "snapshot.attempt"),
+        attempt_evidence=_refs(obj["attempt_evidence"], "snapshot.attempt_evidence"),
+        criteria_contract=_ref(obj["criteria_contract"], "snapshot.criteria_contract"),
+        required_criteria=_refs(obj["required_criteria"], "snapshot.required_criteria"),
+        criteria_evidence=_refs(obj["criteria_evidence"], "snapshot.criteria_evidence"),
+        observations=tuple(
+            _criterion_observation(item, f"snapshot.observations[{index}]")
+            for index, item in enumerate(observations_raw)
+        ),
+        next_operations=_operations(obj["next_operations"], "snapshot.next_operations"),
+    )
+
+    if candidate is None:
+        return SnapshotOutcome(
+            status="no_candidate",
+            reasons=("criteria_outcome_not_yet_conclusive",),
+        )
+    return _gate_candidate(
+        candidate,
+        active_refs=active_refs,
+        seen_fingerprints=seen_fingerprints,
+    )
+
+
 def process_snapshot(
     snapshot: Mapping[str, Any],
     *,
@@ -504,6 +585,12 @@ def process_snapshot(
         )
     if schema == RESIDUAL_SNAPSHOT_SCHEMA:
         return process_residual_snapshot(
+            obj,
+            active_refs=active_refs,
+            seen_fingerprints=seen_fingerprints,
+        )
+    if schema == OUTCOME_SNAPSHOT_SCHEMA:
+        return process_outcome_snapshot(
             obj,
             active_refs=active_refs,
             seen_fingerprints=seen_fingerprints,

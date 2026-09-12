@@ -179,13 +179,13 @@ python examples/run_outcome_producer.py
 
 See [`docs/OUTCOME_PRODUCER.md`](docs/OUTCOME_PRODUCER.md).
 
-The outcome producer is intentionally Python/API-only in this lane. A strict outcome snapshot schema should be added only after this paired producer independently survives review and CI.
+Both outcome states now also use the strict shared snapshot transport. The transport carries an explicit attempt, criteria contract, required criteria, grounded observations, and evidence; it does not authenticate who authored the contract or whether it truly existed before the attempt.
 
 All bundled producer examples use synthetic state and are not live Machine Floor discoveries.
 
 ## Versioned state snapshot handoff
 
-The first five producers use one strict schema-id-routed snapshot transport:
+All six deterministic producers use one strict schema-id-routed snapshot transport:
 
 ```text
 axm-machine-voice/alternative-snapshot/0.1
@@ -193,6 +193,7 @@ axm-machine-voice/conflict-snapshot/0.1
 axm-machine-voice/unresolved-snapshot/0.1
 axm-machine-voice/need-snapshot/0.1
 axm-machine-voice/residual-snapshot/0.1
+axm-machine-voice/outcome-snapshot/0.1
 ```
 
 Examples:
@@ -203,6 +204,8 @@ examples/conflict_snapshot.example.json
 examples/unresolved_snapshot.example.json
 examples/need_snapshot.example.json
 examples/residual_snapshot.example.json
+examples/outcome_snapshot.example.json
+examples/outcome_failure_snapshot.example.json
 ```
 
 The caller supplies active runtime context separately. A snapshot cannot certify its own relevance.
@@ -216,7 +219,7 @@ See [`docs/STATE_SNAPSHOT.md`](docs/STATE_SNAPSHOT.md) and the portable schemas 
 One zero-install command accepts every supported snapshot schema:
 
 ```bash
-python machine_voice.py snapshot examples/residual_snapshot.example.json \
+python machine_voice.py snapshot examples/outcome_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 

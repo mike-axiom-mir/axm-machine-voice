@@ -1,0 +1,65 @@
+{
+  "schema": "axm-machine-voice/outcome-snapshot/0.1",
+  "event_id": "outcome-snapshot-example-failure-001",
+  "source": {
+    "kind": "machine-floor",
+    "id": "outcome-snapshot-example"
+  },
+  "activity": {
+    "kind": "activity",
+    "id": "local-monolith-proof"
+  },
+  "attempt": {
+    "kind": "attempt",
+    "id": "synthetic-build"
+  },
+  "attempt_evidence": [
+    {
+      "kind": "evidence",
+      "id": "synthetic-attempt-log"
+    }
+  ],
+  "criteria_contract": {
+    "kind": "success-contract",
+    "id": "synthetic-build-v1"
+  },
+  "required_criteria": [
+    {
+      "kind": "criterion",
+      "id": "tests-pass"
+    },
+    {
+      "kind": "criterion",
+      "id": "offline-preserved"
+    }
+  ],
+  "criteria_evidence": [
+    {
+      "kind": "evidence",
+      "id": "synthetic-success-contract"
+    }
+  ],
+  "observations": [
+    {
+      "criterion": {
+        "kind": "criterion",
+        "id": "tests-pass"
+      },
+      "observation": {
+        "kind": "criterion-observation",
+        "id": "tests-failed"
+      },
+      "satisfied": false,
+      "evidence": [
+        {
+          "kind": "evidence",
+          "id": "test-failure-log"
+        }
+      ]
+    }
+  ],
+  "next_operations": [
+    "inspect",
+    "compare"
+  ]
+}
