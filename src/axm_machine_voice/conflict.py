@@ -55,6 +55,13 @@ def _validate_json_value(value: Any, path: str = "value") -> None:
     raise ValueError(f"{path} must be a JSON-compatible value")
 
 
+def _number_decimal(value: int | float) -> Decimal:
+    try:
+        return Decimal(str(value)).normalize()
+    except InvalidOperation as exc:  # validation should already prevent this path.
+        raise ValueError("value contains an invalid number") from exc
+
+
 def _value_key(value: Any) -> tuple[Any, ...]:
     """Return a deterministic semantic comparison key for JSON-like values.
 
@@ -67,11 +74,7 @@ def _value_key(value: Any) -> tuple[Any, ...]:
     if isinstance(value, bool):
         return ("bool", value)
     if isinstance(value, (int, float)) and not isinstance(value, bool):
-        try:
-            number = Decimal(str(value))
-        except InvalidOperation as exc:  # validation should already prevent this path.
-            raise ValueError("value contains an invalid number") from exc
-        return ("number", number.normalize())
+        return ("number", _number_decimal(value))
     if isinstance(value, str):
         return ("string", value)
     if isinstance(value, list):
@@ -81,6 +84,33 @@ def _value_key(value: Any) -> tuple[Any, ...]:
             "object",
             tuple((key, _value_key(value[key])) for key in sorted(value)),
         )
+    raise ValueError("value must be JSON-compatible")
+
+
+def _canonical_portable_value(value: Any) -> Any:
+    """Normalize semantically equal portable values before packet fingerprinting.
+
+    In particular, integral JSON numbers use an integer representation so 1 and 1.0 do
+    not create different StateTalk fingerprints for the same conflict. Object keys are
+    ordered recursively for stable inspection; booleans remain distinct from numbers.
+    """
+
+    if value is None or isinstance(value, (str, bool)):
+        return value
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, float):
+        number = _number_decimal(value)
+        if number == number.to_integral_value():
+            return int(number)
+        return float(number)
+    if isinstance(value, list):
+        return [_canonical_portable_value(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _canonical_portable_value(value[key])
+            for key in sorted(value)
+        }
     raise ValueError("value must be JSON-compatible")
 
 
@@ -203,8 +233,8 @@ def produce_exact_conflict(
             ),
             {
                 "assertions": [
-                    {"ref": left.ref.key, "value": left.value},
-                    {"ref": right.ref.key, "value": right.value},
+                    {"ref": left.ref.key, "value": _canonical_portable_value(left.value)},
+                    {"ref": right.ref.key, "value": _canonical_portable_value(right.value)},
                 ],
                 "winner": None,
             },
