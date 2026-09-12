@@ -8,12 +8,12 @@
     {"$ref": "#/$defs/invalid"}
   ],
   "$defs": {
-    "base": {
+    "snapshot_outcome": {
       "type": "object",
       "required": ["protocol", "status", "reasons", "fingerprint", "packet"],
       "properties": {
         "protocol": {"const": "axm-machine-voice/machine-channel/0.1"},
-        "status": {"type": "string"},
+        "status": {"enum": ["emitted", "no_candidate", "rejected"]},
         "reasons": {
           "type": "array",
           "items": {"type": "string"}
@@ -30,19 +30,8 @@
             {"type": "null"}
           ]
         }
-      }
-    },
-    "snapshot_outcome": {
-      "allOf": [
-        {"$ref": "#/$defs/base"},
-        {
-          "type": "object",
-          "properties": {
-            "status": {"enum": ["emitted", "no_candidate", "rejected"]}
-          },
-          "additionalProperties": false
-        }
-      ]
+      },
+      "additionalProperties": false
     },
     "recorded": {
       "type": "object",
