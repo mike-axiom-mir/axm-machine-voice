@@ -9,7 +9,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from axm_machine_voice.cli import main  # noqa: E402
+from axm_machine_voice.cli import MACHINE_CHANNEL_PROTOCOL, main  # noqa: E402
 
 
 class MachineCliTests(unittest.TestCase):
@@ -31,7 +31,9 @@ class MachineCliTests(unittest.TestCase):
         text = output.getvalue()
         self.assertTrue(text.endswith("\n"))
         self.assertEqual(len(text.strip().splitlines()), 1)
-        return code, json.loads(text)
+        result = json.loads(text)
+        self.assertEqual(result["protocol"], MACHINE_CHANNEL_PROTOCOL)
+        return code, result
 
     def test_example_snapshot_emits_one_machine_json_response(self):
         code, result = self.run_cli([
@@ -130,6 +132,36 @@ class MachineCliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertEqual(result["status"], "invalid")
         self.assertEqual(result["reasons"], ["JSONDecodeError"])
+
+    def test_missing_active_context_is_json_invalid_not_argparse_prose(self):
+        code, result = self.run_cli(["snapshot", str(self.example)])
+        self.assertEqual(code, 2)
+        self.assertEqual(result["status"], "invalid")
+        self.assertIn("--active-ref", result["error"])
+
+    def test_malformed_active_ref_is_json_invalid(self):
+        code, result = self.run_cli([
+            "snapshot",
+            str(self.example),
+            "--active-ref",
+            "not-a-ref",
+        ])
+        self.assertEqual(code, 2)
+        self.assertEqual(result["status"], "invalid")
+        self.assertIn("kind:id", result["error"])
+
+    def test_blank_seen_fingerprint_is_invalid(self):
+        code, result = self.run_cli([
+            "snapshot",
+            str(self.example),
+            "--active-ref",
+            self.active,
+            "--seen-fingerprint",
+            "   ",
+        ])
+        self.assertEqual(code, 2)
+        self.assertEqual(result["status"], "invalid")
+        self.assertIn("non-empty", result["error"])
 
 
 if __name__ == "__main__":
