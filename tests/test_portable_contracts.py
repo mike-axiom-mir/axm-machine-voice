@@ -12,6 +12,7 @@ from axm_machine_voice import (  # noqa: E402
     FLOORVOICE,
     JOURNAL_PROTOCOL,
     NEED_SNAPSHOT_SCHEMA,
+    OUTCOME_SNAPSHOT_SCHEMA,
     RESIDUAL_SNAPSHOT_SCHEMA,
     SNAPSHOT_SCHEMA,
     UNRESOLVED_SNAPSHOT_SCHEMA,
@@ -44,6 +45,7 @@ class PortableContractTests(unittest.TestCase):
             "unresolved-snapshot-0.1.schema.json",
             "need-snapshot-0.1.schema.json",
             "residual-snapshot-0.1.schema.json",
+            "outcome-snapshot-0.1.schema.json",
             "local-bridge-0.1.schema.json",
             "machine-channel-0.1.schema.json",
             "communication-journal-0.1.schema.json",
@@ -61,12 +63,14 @@ class PortableContractTests(unittest.TestCase):
         unresolved = self.load("unresolved-snapshot-0.1.schema.json")
         need = self.load("need-snapshot-0.1.schema.json")
         residual = self.load("residual-snapshot-0.1.schema.json")
+        outcome = self.load("outcome-snapshot-0.1.schema.json")
         self.assertEqual(alternative["properties"]["schema"]["const"], SNAPSHOT_SCHEMA)
         self.assertEqual(conflict["properties"]["schema"]["const"], CONFLICT_SNAPSHOT_SCHEMA)
         self.assertEqual(unresolved["properties"]["schema"]["const"], UNRESOLVED_SNAPSHOT_SCHEMA)
         self.assertEqual(need["properties"]["schema"]["const"], NEED_SNAPSHOT_SCHEMA)
         self.assertEqual(residual["properties"]["schema"]["const"], RESIDUAL_SNAPSHOT_SCHEMA)
-        for schema in (alternative, conflict, unresolved, need, residual):
+        self.assertEqual(outcome["properties"]["schema"]["const"], OUTCOME_SNAPSHOT_SCHEMA)
+        for schema in (alternative, conflict, unresolved, need, residual, outcome):
             self.assertFalse(schema["additionalProperties"])
 
         self.assertGreaterEqual(alternative["properties"]["required_constraints"]["minItems"], 1)
@@ -89,6 +93,14 @@ class PortableContractTests(unittest.TestCase):
             evidence_schema = residual["$defs"]["evidence_refs"]
             self.assertEqual(check["properties"][field]["$ref"], "#/$defs/evidence_refs")
             self.assertGreaterEqual(evidence_schema["minItems"], 1)
+
+        self.assertGreaterEqual(outcome["properties"]["attempt_evidence"]["minItems"], 1)
+        self.assertGreaterEqual(outcome["properties"]["required_criteria"]["minItems"], 1)
+        self.assertGreaterEqual(outcome["properties"]["criteria_evidence"]["minItems"], 1)
+        self.assertNotIn("minItems", outcome["properties"]["observations"])
+        observation = outcome["$defs"]["criterion_observation"]
+        self.assertEqual(observation["properties"]["satisfied"]["type"], "boolean")
+        self.assertGreaterEqual(observation["properties"]["evidence"]["minItems"], 1)
 
     def test_statetalk_schema_kind_vocabulary_matches_floorvoice_exactly(self):
         schema = self.load("statetalk-packet-0.1.schema.json")
