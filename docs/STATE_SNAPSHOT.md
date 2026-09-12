@@ -11,6 +11,7 @@ axm-machine-voice/unresolved-snapshot/0.1
 axm-machine-voice/need-snapshot/0.1
 axm-machine-voice/residual-snapshot/0.1
 axm-machine-voice/outcome-snapshot/0.1
+axm-machine-voice/history-snapshot/0.1
 ```
 
 Complete examples include:
@@ -23,6 +24,8 @@ examples/need_snapshot.example.json
 examples/residual_snapshot.example.json
 examples/outcome_snapshot.example.json
 examples/outcome_failure_snapshot.example.json
+examples/history_snapshot.example.json
+examples/history_novel_snapshot.example.json
 ```
 
 Portable JSON Schema descriptions live under `schemas/` with matching names.
@@ -46,6 +49,8 @@ StateTalk packet or silence/rejection
 ```
 
 The router never guesses the producer from filenames or field similarity. The explicit `schema` value selects the exact adapter. Unsupported schema ids fail closed. Adapters reject unknown fields instead of silently discarding meaning.
+
+The history schema is added through a thin additive wrapper. Existing six schemas delegate unchanged to the earlier proven router; only `history-snapshot/0.1` uses the new history adapter.
 
 ## Declared relevance is not active context
 
@@ -116,28 +121,7 @@ Protocol:
 axm-machine-voice/outcome-snapshot/0.1
 ```
 
-The snapshot supplies:
-
-```text
-attempt
-attempt evidence
-criteria contract
-one or more required criteria
-criteria-contract evidence
-zero or more criterion observations
-next operations
-```
-
-Each observation is exactly:
-
-```json
-{
-  "criterion": {"kind": "criterion", "id": "..."},
-  "observation": {"kind": "criterion-observation", "id": "..."},
-  "satisfied": true,
-  "evidence": [{"kind": "evidence", "id": "..."}]
-}
-```
+The snapshot supplies an attempt, attempt evidence, criteria contract, required criteria, criteria-contract evidence, grounded criterion observations, and next operations.
 
 The snapshot does **not** carry an aggregation-rule field. The producer fixes v0.1 to:
 
@@ -155,7 +139,71 @@ partial all-positive evidence          → no_candidate silence
 
 The success/failure meaning remains bounded to the supplied contract. Transport does not authenticate who authored the contract, whether it was modified later, or whether it truly existed before the attempt.
 
-A success packet explicitly denies global success and contract-authenticity/timing claims. A failure packet explicitly denies global failure and the same authenticity/timing claims.
+## History repeat / novelty snapshot
+
+Protocol:
+
+```text
+axm-machine-voice/history-snapshot/0.1
+```
+
+The snapshot supplies:
+
+```text
+current pattern ref
+pattern domain
+portable signature
+current evidence
+history scope ref
+complete_for_domain boolean
+history-scope evidence
+zero or more historical entries
+next operations
+```
+
+Each historical entry supplies:
+
+```text
+entry ref
+non-negative integer position
+same explicit pattern domain
+portable signature
+evidence
+```
+
+The producer preserves its asymmetric burden:
+
+```text
+exact grounded prior match                     → REPEAT → This happened before.
+no exact match + complete_for_domain true       → NOVEL  → This is new.
+no exact match + complete_for_domain false      → no_candidate silence
+```
+
+Repeat does not need complete history because one grounded prior match is enough. Bounded novelty requires an explicit complete-for-domain claim.
+
+A repeat packet explicitly keeps:
+
+```json
+{
+  "history_ordering_authenticated": false,
+  "outside_scope_recurrence_claimed": false
+}
+```
+
+A bounded-novelty packet explicitly keeps:
+
+```json
+{
+  "history_scope_complete_for_domain_claimed": true,
+  "history_scope_completeness_authenticated": false,
+  "history_ordering_authenticated": false,
+  "global_novelty_claimed": false,
+  "scientific_novelty_claimed": false,
+  "outside_scope_novelty_claimed": false
+}
+```
+
+Transport therefore does not convert absence in one supplied history into global/scientific novelty and does not authenticate completeness or chronological ordering.
 
 ## Shared reference object
 
@@ -169,7 +217,7 @@ No adapter infers aliases or hidden equivalence between differently named refere
 
 ## Outcomes
 
-All six adapters return the same `SnapshotOutcome` states:
+All seven adapters return the same `SnapshotOutcome` states:
 
 - `emitted` — a candidate survived its exact producer and the communication gate;
 - `no_candidate` — the supplied state contains nothing that producer is allowed to say;
@@ -194,6 +242,7 @@ process_unresolved_snapshot(...)
 process_need_snapshot(...)
 process_residual_snapshot(...)
 process_outcome_snapshot(...)
+process_history_snapshot(...)
 ```
 
 `SNAPSHOT_SCHEMA` remains an alias for the original alternative schema for backward compatibility.
@@ -203,7 +252,7 @@ process_outcome_snapshot(...)
 The same zero-install command accepts all supported snapshots:
 
 ```bash
-python machine_voice.py snapshot examples/outcome_snapshot.example.json \
+python machine_voice.py snapshot examples/history_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
@@ -215,14 +264,14 @@ Any supported snapshot can drive the same offline renderer:
 
 ```bash
 python examples/build_local_monolith_proof.py \
-  --snapshot examples/outcome_failure_snapshot.example.json \
+  --snapshot examples/history_novel_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
-Rendering proves the handoff path worked. It does not prove the external source, evidence, criteria contract, or contract timing/authorship claim was truthful/correct.
+Rendering proves the handoff path worked. It does not prove the external source, evidence, history completeness, or historical ordering was truthful/correct.
 
 ## Truth boundary
 
-The snapshot layer does not infer missing evidence, hidden constraints/requirements, metric meaning, assertion aliases, which side of a conflict is true, global impossibility from a bounded search, global unavailability from a bounded inventory, cause/novelty/model invalidity/observation invalidity from a residual, global success/failure from one criteria contract, criteria-contract authenticity/authorship/pre-attempt timing, source authenticity, or active relevance.
+The snapshot layer does not infer missing evidence, hidden constraints/requirements, metric meaning, assertion aliases, which side of a conflict is true, global impossibility from a bounded search, global unavailability from a bounded inventory, cause/novelty/model invalidity/observation invalidity from a residual, global success/failure from one criteria contract, criteria-contract authenticity/authorship/pre-attempt timing, global/scientific novelty from one supplied history, history completeness/chronological authenticity, source authenticity, or active relevance.
 
 A future snapshot format that needs more meaning must use an explicit schema revision. Do not add fields and expect older readers to ignore them.
