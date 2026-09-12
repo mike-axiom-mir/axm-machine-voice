@@ -5,7 +5,12 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "examples"))
 
-from build_local_monolith_proof import BRIDGE_PROTOCOL, build_html  # noqa: E402
+from build_local_monolith_proof import (  # noqa: E402
+    BRIDGE_PROTOCOL,
+    build_html,
+    load_snapshot_outcome,
+)
+from axm_machine_voice import packet_dict  # noqa: E402
 
 
 class LocalMonolithProofTests(unittest.TestCase):
@@ -29,6 +34,18 @@ class LocalMonolithProofTests(unittest.TestCase):
         self.assertIn('"producer":"lower-cost-alternative/0.2"', html)
         self.assertIn('"cost_metric":"metric:transition-steps"', html)
         self.assertNotIn("demo-only-not-a-live-semantic-fingerprint", html)
+
+    def test_versioned_snapshot_can_drive_same_harness_without_code_change(self):
+        snapshot_path = ROOT / "examples" / "alternative_snapshot.example.json"
+        outcome = load_snapshot_outcome(snapshot_path)
+        self.assertEqual(outcome.status, "emitted")
+        html = build_html(
+            packet_dict(outcome.packet),
+            source_label="snapshot-supplied state (external provenance not verified by renderer)",
+        )
+        self.assertIn("snapshot-example-001", html)
+        self.assertIn("snapshot-supplied state", html)
+        self.assertIn('"source":{"kind":"machine-floor","id":"snapshot-example"}', html)
 
 
 if __name__ == "__main__":
