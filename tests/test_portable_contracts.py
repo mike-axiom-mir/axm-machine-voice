@@ -12,6 +12,7 @@ from axm_machine_voice import (  # noqa: E402
     FLOORVOICE,
     JOURNAL_PROTOCOL,
     SNAPSHOT_SCHEMA,
+    UNRESOLVED_SNAPSHOT_SCHEMA,
 )
 from axm_machine_voice.cli import MACHINE_CHANNEL_PROTOCOL  # noqa: E402
 
@@ -38,6 +39,7 @@ class PortableContractTests(unittest.TestCase):
             "statetalk-packet-0.1.schema.json",
             "alternative-snapshot-0.1.schema.json",
             "conflict-snapshot-0.1.schema.json",
+            "unresolved-snapshot-0.1.schema.json",
             "local-bridge-0.1.schema.json",
             "machine-channel-0.1.schema.json",
             "communication-journal-0.1.schema.json",
@@ -52,14 +54,21 @@ class PortableContractTests(unittest.TestCase):
     def test_snapshot_schema_protocols_match_runtime(self):
         alternative = self.load("alternative-snapshot-0.1.schema.json")
         conflict = self.load("conflict-snapshot-0.1.schema.json")
+        unresolved = self.load("unresolved-snapshot-0.1.schema.json")
         self.assertEqual(alternative["properties"]["schema"]["const"], SNAPSHOT_SCHEMA)
         self.assertEqual(conflict["properties"]["schema"]["const"], CONFLICT_SNAPSHOT_SCHEMA)
-        self.assertFalse(alternative["additionalProperties"])
-        self.assertFalse(conflict["additionalProperties"])
+        self.assertEqual(unresolved["properties"]["schema"]["const"], UNRESOLVED_SNAPSHOT_SCHEMA)
+        for schema in (alternative, conflict, unresolved):
+            self.assertFalse(schema["additionalProperties"])
+
         self.assertGreaterEqual(alternative["properties"]["required_constraints"]["minItems"], 1)
         assertion = conflict["$defs"]["assertion"]
         self.assertGreaterEqual(assertion["properties"]["evidence"]["minItems"], 1)
         self.assertIn("value", assertion["required"])
+        self.assertGreaterEqual(unresolved["properties"]["required_constraints"]["minItems"], 1)
+        attempt = unresolved["$defs"]["attempt"]
+        self.assertGreaterEqual(attempt["properties"]["evidence"]["minItems"], 1)
+        self.assertNotIn("minItems", unresolved["properties"]["attempts"])
 
     def test_statetalk_schema_kind_vocabulary_matches_floorvoice_exactly(self):
         schema = self.load("statetalk-packet-0.1.schema.json")
