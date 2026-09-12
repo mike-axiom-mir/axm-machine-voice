@@ -23,9 +23,7 @@ v0.1 therefore supports exactly one aggregation rule:
 all_required
 ```
 
-Every required criterion must be satisfied for success.
-
-One grounded failed required criterion is enough to establish failure relative to that contract.
+Every required criterion must be satisfied for success. One grounded failed required criterion is enough to establish failure relative to that contract.
 
 ## Inputs
 
@@ -118,8 +116,6 @@ some criteria true + others unknown
           no candidate
 ```
 
-It does not upgrade partial positive evidence into success.
-
 A grounded false criterion is different:
 
 ```text
@@ -164,14 +160,44 @@ observation ── fails_criterion ───────> criterion
 observation ── supported_by ──────────> evidence
 ```
 
-## Runnable example
+## Runnable producer example
 
 ```bash
 python examples/run_outcome_producer.py
 ```
 
-The bundled example uses synthetic state and writes both a success and failure packet. It is not a live Machine Floor result.
+The bundled producer example uses synthetic state and writes both a success and failure packet. It is not a live Machine Floor result.
 
-## Transport boundary
+## Strict snapshot transport
 
-v0.1 producer review comes first. A strict versioned outcome snapshot should be added only after this paired producer independently passes review and CI, following the same pattern as the earlier Machine Voice capabilities.
+Protocol:
+
+```text
+axm-machine-voice/outcome-snapshot/0.1
+```
+
+Success and failure use the **same** snapshot schema. Complete examples:
+
+```text
+examples/outcome_snapshot.example.json
+examples/outcome_failure_snapshot.example.json
+```
+
+The snapshot carries the explicit attempt, attempt evidence, criteria contract, required criteria, criteria evidence, grounded observations, and next operations. It does **not** contain a configurable aggregation rule; `all_required` remains fixed by the producer.
+
+Machine channel:
+
+```bash
+python machine_voice.py snapshot examples/outcome_snapshot.example.json \
+  --active-ref activity:local-monolith-proof
+```
+
+Offline renderer proof:
+
+```bash
+python examples/build_local_monolith_proof.py \
+  --snapshot examples/outcome_failure_snapshot.example.json \
+  --active-ref activity:local-monolith-proof
+```
+
+The transport changes no truth boundary. It does not authenticate contract authorship, contract timing, evidence truth, or active relevance. Active relevance remains independently supplied by the runtime.
