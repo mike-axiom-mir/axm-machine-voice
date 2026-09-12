@@ -15,7 +15,7 @@ The channel is deterministic, local, standard-library-only, and emits exactly on
 One command accepts every explicitly supported snapshot schema:
 
 ```bash
-python machine_voice.py snapshot examples/unresolved_snapshot.example.json \
+python machine_voice.py snapshot examples/residual_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
@@ -25,24 +25,18 @@ Currently supported snapshot schemas are:
 axm-machine-voice/alternative-snapshot/0.1
 axm-machine-voice/conflict-snapshot/0.1
 axm-machine-voice/unresolved-snapshot/0.1
+axm-machine-voice/need-snapshot/0.1
+axm-machine-voice/residual-snapshot/0.1
 ```
 
 Routing is based only on the explicit `schema` id. Unsupported ids fail closed.
 
-Snapshots may also be piped over stdin:
-
-```bash
-cat examples/unresolved_snapshot.example.json | \
-python machine_voice.py snapshot - \
-  --active-ref activity:local-monolith-proof
-```
-
-`--active-ref` stays outside the snapshot so a snapshot cannot certify its own relevance.
+Snapshots may also be piped over stdin. `--active-ref` stays outside the snapshot so a snapshot cannot certify its own relevance.
 
 Repeated `--seen-fingerprint` arguments suppress already-emitted semantics. A communication journal can provide prior fingerprints automatically:
 
 ```bash
-python machine_voice.py snapshot examples/unresolved_snapshot.example.json \
+python machine_voice.py snapshot examples/residual_snapshot.example.json \
   --active-ref activity:local-monolith-proof \
   --journal local/communication.jsonl
 ```
@@ -53,7 +47,7 @@ Only newly emitted communication is appended.
 
 ```bash
 python machine_voice.py respond local/communication.jsonl \
-  --event-id unresolved-snapshot-example-001 \
+  --event-id residual-snapshot-example-001 \
   --actor human:local-user \
   --action inspect
 ```
@@ -89,12 +83,14 @@ Producer-specific callers can use:
 process_alternative_snapshot(...)
 process_conflict_snapshot(...)
 process_unresolved_snapshot(...)
+process_need_snapshot(...)
+process_residual_snapshot(...)
 ```
 
 Journal-aware runtimes can additionally use `append_emission`, `append_response`, `emitted_fingerprints`, and `read_journal`.
 
 ## Truth boundary
 
-The machine channel does not authenticate snapshot creators or response actors, prove evidence true, choose which side of a conflict is correct, turn a bounded unresolved search into global impossibility, make proposals canonical, execute proposal contents, generate explanatory prose, or convert invalid state into a plausible guess.
+The machine channel does not authenticate snapshot creators or response actors, prove evidence true, choose which side of a conflict is correct, turn a bounded unresolved search into global impossibility, turn a bounded inventory miss into global unavailability, turn a residual into a cause/novelty/model-failure claim, make proposals canonical, execute proposal contents, generate explanatory prose, or convert invalid state into a plausible guess.
 
 Its job is narrower: preserve one deterministic versioned route from supplied state to canonical Machine Voice output, grounded silence/rejection, or an explicit structured interaction record.
