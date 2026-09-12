@@ -53,13 +53,17 @@
     .lamp[data-kind="notice"], .lamp[data-kind="need"], .lamp[data-kind="repeat"], .lamp[data-kind="unresolved"] { background:#6c8fc3; box-shadow:0 0 34px rgba(108,143,195,.45); }
     .phrase { font-size:clamp(25px,4vw,42px); letter-spacing:-.03em; margin-bottom:10px; }
     .source-line { color:#8e9aa6; font-size:13px; }
-    .controls { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+    .controls, .response-controls { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:16px; }
     button, .file-label {
       appearance:none; border:1px solid rgba(255,255,255,.14); color:#eef3f8; background:rgba(255,255,255,.055);
       border-radius:10px; padding:10px 12px; font:inherit; cursor:pointer;
     }
     button:hover, .file-label:hover { background:rgba(255,255,255,.09); }
+    button:disabled { opacity:.35; cursor:not-allowed; background:rgba(255,255,255,.025); }
     input[type=file] { display:none; }
+    .response-panel { margin-top:18px; padding-top:16px; border-top:1px solid rgba(255,255,255,.08); }
+    .response-title { color:#9eabb8; font-size:11px; letter-spacing:.09em; text-transform:uppercase; }
+    .response-status { margin-top:10px; color:#8795a3; font-size:12px; min-height:18px; }
     .truth-note { margin-top:14px; color:#8f9ca9; font-size:12px; line-height:1.5; }
     .kv { display:grid; grid-template-columns:130px 1fr; gap:9px 12px; font-size:13px; margin-bottom:18px; }
     .kv dt { color:#8693a0; }
@@ -98,8 +102,17 @@
             <label class="file-label" for="packetFile">Open packet JSON</label>
             <input id="packetFile" type="file" accept="application/json,.json">
           </div>
+          <div class="response-panel">
+            <div class="response-title">Primitive response</div>
+            <div class="response-controls">
+              <button type="button" data-response-action="inspect" disabled>Inspect</button>
+              <button type="button" data-response-action="compare" disabled>Compare</button>
+              <button type="button" data-response-action="acknowledge" disabled>Acknowledge</button>
+            </div>
+            <div class="response-status" id="responseStatus">Response bridge inactive for the bundled demo.</div>
+          </div>
           <div id="error" class="error"></div>
-          <div class="truth-note">Truth boundary: this page never invents a phrase from free text. It renders only the fixed phrase mapped to <code>packet.kind</code>. Loaded data is shown as supplied and is not declared true merely because it renders.</div>
+          <div class="truth-note">Truth boundary: this page never invents a phrase from free text. It renders only the fixed phrase mapped to <code>packet.kind</code>. Loaded data is shown as supplied and is not declared true merely because it renders. Human response actions carry no actor identity; the embedding runtime must supply that independently.</div>
         </div>
       </div>
     </section>
@@ -143,6 +156,8 @@
     failure: "This did not work.",
     look: "Look here."
   });
+  const RESPONSE_ACTIONS = Object.freeze(["inspect", "compare", "acknowledge"]);
+  const RESPONSE_STATUSES = new Set(["received", "recorded", "rejected"]);
 
   const demoPacket = {
     version: "0.1",
@@ -197,11 +212,17 @@
   };
 
   const el = id => document.getElementById(id);
+  const responseButtons = [...document.querySelectorAll("[data-response-action]")];
   const refText = ref => `${String(ref?.kind ?? "unknown")}:${String(ref?.id ?? "unknown")}`;
+  let currentPacket = demoPacket;
+  let currentSourceMode = "demo";
+  let nextResponseNumber = 1;
+  const pendingResponses = new Map();
 
   function validatePacket(packet) {
     if (!packet || typeof packet !== "object") throw new Error("Packet must be an object.");
     if (!FLOORVOICE[packet.kind]) throw new Error(`Unknown FloorVoice kind: ${String(packet.kind)}`);
+    if (!packet.event_id || typeof packet.event_id !== "string") throw new Error("Packet event_id is missing or malformed.");
     if (!packet.source || !packet.source.kind || !packet.source.id) throw new Error("Packet source is missing or malformed.");
     if (!Array.isArray(packet.subjects)) throw new Error("Packet subjects must be an array.");
     if (!Array.isArray(packet.evidence)) throw new Error("Packet evidence must be an array.");
@@ -231,19 +252,47 @@
     el("summary").append(dt, dd);
   }
 
+  function responseAllowed(action) {
+    if (window.parent === window || currentSourceMode !== "embedded") return false;
+    if (action === "acknowledge") return true;
+    return currentPacket.next_operations.includes(action);
+  }
+
+  function updateResponseControls() {
+    for (const button of responseButtons) {
+      const action = button.dataset.responseAction;
+      button.disabled = !responseAllowed(action);
+    }
+
+    if (currentSourceMode === "demo") {
+      el("responseStatus").textContent = "Response bridge inactive for the bundled demo.";
+    } else if (window.parent === window) {
+      el("responseStatus").textContent = "Standalone packet view: no parent runtime is available to record a response.";
+    } else if (currentSourceMode !== "embedded") {
+      el("responseStatus").textContent = "Locally opened packet: responses are not forwarded as monolith interaction.";
+    } else {
+      el("responseStatus").textContent = "Choose a grounded response. Actor identity is supplied by the parent runtime, not this page.";
+    }
+  }
+
   function render(packet, sourceMode) {
     validatePacket(packet);
+    currentPacket = packet;
+    currentSourceMode = sourceMode;
+    pendingResponses.clear();
     el("error").style.display = "none";
     el("lamp").dataset.kind = packet.kind;
     el("phrase").textContent = FLOORVOICE[packet.kind];
-    el("modeBadge").textContent = sourceMode === "demo" ? "bundled demo" : "loaded packet";
+    el("modeBadge").textContent = sourceMode === "demo" ? "bundled demo" : sourceMode === "embedded" ? "embedded packet" : "loaded packet";
     el("sourceLine").textContent = sourceMode === "demo"
       ? "Source: bundled example — not a live Machine Floor event"
-      : "Source: locally supplied packet — authenticity/truth depends on its producer and evidence";
+      : sourceMode === "embedded"
+        ? "Source: parent-supplied packet — truth depends on producer/evidence"
+        : "Source: locally supplied packet — authenticity/truth depends on its producer and evidence";
 
     el("summary").innerHTML = "";
     row("Protocol version", String(packet.version ?? "unknown"));
-    row("Event", String(packet.event_id ?? "unknown"));
+    row("Event", String(packet.event_id));
     row("Kind", String(packet.kind));
     row("Source", refText(packet.source));
     row("Claim", String(packet.claim?.predicate ?? "none"));
@@ -275,11 +324,34 @@
     }
 
     el("raw").textContent = JSON.stringify(packet, null, 2);
+    updateResponseControls();
   }
 
   function showError(error) {
     el("error").textContent = error instanceof Error ? error.message : String(error);
     el("error").style.display = "block";
+  }
+
+  function sendResponse(action) {
+    if (!RESPONSE_ACTIONS.includes(action) || !responseAllowed(action)) return;
+    const responseId = `local-response-${nextResponseNumber++}`;
+    const response = {
+      event_id: currentPacket.event_id,
+      action,
+      targets: []
+    };
+    pendingResponses.set(responseId, response);
+    window.parent.postMessage({
+      protocol: PROTOCOL,
+      type: "response-action",
+      response_id: responseId,
+      ...response
+    }, "*");
+    el("responseStatus").textContent = `Sent ${action} to parent runtime; persistence is not claimed until the parent confirms this exact response.`;
+  }
+
+  for (const button of responseButtons) {
+    button.addEventListener("click", () => sendResponse(button.dataset.responseAction));
   }
 
   el("demoButton").addEventListener("click", () => render(demoPacket, "demo"));
@@ -299,12 +371,32 @@
   window.addEventListener("message", event => {
     if (window.parent === window || event.source !== window.parent) return;
     const message = event.data;
-    if (!message || message.protocol !== PROTOCOL || message.type !== "load-packet") return;
-    try {
-      render(message.packet, "local");
-      event.source?.postMessage?.({ protocol: PROTOCOL, type: "packet-rendered", event_id: message.packet?.event_id ?? null }, "*");
-    } catch (error) {
-      showError(error);
+    if (!message || message.protocol !== PROTOCOL) return;
+
+    if (message.type === "load-packet") {
+      try {
+        render(message.packet, "embedded");
+        event.source?.postMessage?.({ protocol: PROTOCOL, type: "packet-rendered", event_id: message.packet?.event_id ?? null }, "*");
+      } catch (error) {
+        showError(error);
+      }
+      return;
+    }
+
+    if (message.type === "response-status") {
+      if (!RESPONSE_STATUSES.has(message.status) || typeof message.response_id !== "string") return;
+      const pending = pendingResponses.get(message.response_id);
+      if (!pending) return;
+      if (message.event_id !== pending.event_id || message.action !== pending.action) return;
+      pendingResponses.delete(message.response_id);
+
+      if (message.status === "recorded") {
+        el("responseStatus").textContent = `${pending.action} recorded by parent runtime.`;
+      } else if (message.status === "received") {
+        el("responseStatus").textContent = `${pending.action} received by parent runtime; persistence not confirmed.`;
+      } else {
+        el("responseStatus").textContent = `${pending.action} rejected by parent runtime.`;
+      }
     }
   });
 

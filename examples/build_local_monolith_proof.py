@@ -4,6 +4,12 @@ Without `--snapshot`, the packet comes from the synthetic deterministic example.
 With `--snapshot`, the supplied versioned state snapshot is validated, processed by the
 real producer and communication gate, then embedded only when it actually emits.
 Snapshot relevance is checked against independently supplied `--active-ref` values.
+
+The proof parent also receives primitive `response-action` messages from the child and
+returns `response-status=received`. It independently checks event id, response id,
+action vocabulary, packet next_operations, and target shape before acknowledging.
+It deliberately does not claim journal persistence; real persistence belongs to the
+monolith/runtime actor + communication-journal path.
 """
 
 from html import escape
@@ -85,9 +91,30 @@ def build_html(
 (() => {{
   \"use strict\";
   const PROTOCOL = {json.dumps(BRIDGE_PROTOCOL)};
+  const RESPONSE_ACTIONS = new Set([\"inspect\", \"compare\", \"acknowledge\"]);
   const packet = {packet_json};
   const frame = document.getElementById(\"voice\");
   const status = document.getElementById(\"status\");
+
+  function responseAllowed(message) {{
+    if (typeof message.response_id !== \"string\" || !message.response_id) return false;
+    if (message.event_id !== packet.event_id) return false;
+    if (!RESPONSE_ACTIONS.has(message.action)) return false;
+    if (!Array.isArray(message.targets)) return false;
+    if (message.action !== \"acknowledge\" && !packet.next_operations.includes(message.action)) return false;
+    return true;
+  }}
+
+  function returnResponseStatus(message, responseStatus) {{
+    frame.contentWindow.postMessage({{
+      protocol: PROTOCOL,
+      type: \"response-status\",
+      response_id: message.response_id ?? null,
+      event_id: message.event_id ?? null,
+      action: message.action ?? null,
+      status: responseStatus
+    }}, \"*\");
+  }}
 
   window.addEventListener(\"message\", event => {{
     if (event.source !== frame.contentWindow) return;
@@ -101,7 +128,19 @@ def build_html(
     }}
 
     if (message.type === \"packet-rendered\") {{
-      status.textContent = `rendered ${{message.event_id ?? \"unknown event\"}}`;
+      status.textContent = `rendered ${{message.event_id ?? \"unknown event\"}} — response bridge ready`;
+      return;
+    }}
+
+    if (message.type === \"response-action\") {{
+      if (!responseAllowed(message)) {{
+        status.textContent = \"response rejected — proof validation failed\";
+        returnResponseStatus(message, \"rejected\");
+        return;
+      }}
+
+      status.textContent = `response ${{message.action}} received — proof only, not journaled`;
+      returnResponseStatus(message, \"received\");
     }}
   }});
 }})();

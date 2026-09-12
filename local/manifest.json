@@ -1,7 +1,7 @@
 {
   "id": "axm-machine-voice",
   "name": "AXM Machine Voice",
-  "version": "0.2-local",
+  "version": "0.3-local",
   "entry": "local/index.html",
   "mode": "offline",
   "network_required": false,
@@ -10,8 +10,8 @@
   "cloud_required": false,
   "bridge": {
     "protocol": "axm-machine-voice/local-bridge/0.1",
-    "accepts": ["load-packet"],
-    "emits": ["ready", "packet-rendered"]
+    "accepts": ["load-packet", "response-status"],
+    "emits": ["ready", "packet-rendered", "response-action"]
   },
-  "truth_boundary": "The local renderer displays supplied StateTalk structure and fixed FloorVoice phrases. Rendering is not validation and does not make a proposal true or canonical."
+  "truth_boundary": "The local renderer displays supplied StateTalk structure and fixed FloorVoice phrases. Human response actions carry no actor identity; the parent runtime must independently supply and persist that identity. Rendering or responding does not make a proposal true or canonical."
 }
