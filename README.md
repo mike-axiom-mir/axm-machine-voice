@@ -74,9 +74,11 @@ python -m unittest discover -s tests -v
 
 It can surface `There is another way.` only when supplied evidence proves that a candidate option:
 
-- has strictly lower supplied cost than the current option;
+- has strictly lower supplied cost than the current option under one explicitly named metric;
 - explicitly preserves every required constraint;
 - carries inspectable evidence.
+
+The metric itself is a state reference, so the packet can show what the compared numbers mean instead of silently assuming that two numeric values are comparable.
 
 The producer does not infer hidden constraints, invent preferences, generate prose, or declare the alternative correct. It returns a `Candidate`; the normal communication gate must still accept that candidate before a StateTalk packet exists.
 
@@ -116,6 +118,24 @@ axm-machine-voice/local-bridge/0.1
 ```
 
 The renderer remains downstream of the core truth boundary: **rendering a packet does not prove its claim, adopt its proposal, or make it canonical.**
+
+### One-command monolith proof
+
+To exercise the complete current path without a server:
+
+```bash
+python examples/build_local_monolith_proof.py
+```
+
+Then open:
+
+```text
+local/monolith_proof.generated.html
+```
+
+The generated parent page embeds `local/index.html`, waits for the renderer's real `ready` bridge event, sends the packet produced by the deterministic producer and communication gate, and confirms the rendered event. It contains no network dependency.
+
+The input state is still **synthetic test state** and the generated page says so explicitly. This proves the integration path, not autonomous discovery or live Machine Floor provenance.
 
 ## FloorVoice v0.1
 

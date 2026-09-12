@@ -47,11 +47,12 @@ class LocalSurfaceTests(unittest.TestCase):
         self.assertFalse(data["cloud_required"])
         self.assertEqual(data["bridge"]["protocol"], "axm-machine-voice/local-bridge/0.1")
 
-    def test_bridge_supports_external_packet_without_network_dependency(self):
+    def test_bridge_supports_parent_packet_without_network_dependency(self):
         text = LOCAL_HTML.read_text(encoding="utf-8")
         self.assertIn('message.type !== "load-packet"', text)
         self.assertIn('type: "ready"', text)
         self.assertIn('type: "packet-rendered"', text)
+        self.assertIn('window.parent === window || event.source !== window.parent', text)
 
 
 if __name__ == "__main__":
