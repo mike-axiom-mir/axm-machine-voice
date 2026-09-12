@@ -216,6 +216,8 @@
   const refText = ref => `${String(ref?.kind ?? "unknown")}:${String(ref?.id ?? "unknown")}`;
   let currentPacket = demoPacket;
   let currentSourceMode = "demo";
+  let nextResponseNumber = 1;
+  const pendingResponses = new Map();
 
   function validatePacket(packet) {
     if (!packet || typeof packet !== "object") throw new Error("Packet must be an object.");
@@ -277,6 +279,7 @@
     validatePacket(packet);
     currentPacket = packet;
     currentSourceMode = sourceMode;
+    pendingResponses.clear();
     el("error").style.display = "none";
     el("lamp").dataset.kind = packet.kind;
     el("phrase").textContent = FLOORVOICE[packet.kind];
@@ -331,14 +334,20 @@
 
   function sendResponse(action) {
     if (!RESPONSE_ACTIONS.includes(action) || !responseAllowed(action)) return;
-    window.parent.postMessage({
-      protocol: PROTOCOL,
-      type: "response-action",
+    const responseId = `local-response-${nextResponseNumber++}`;
+    const response = {
       event_id: currentPacket.event_id,
       action,
       targets: []
+    };
+    pendingResponses.set(responseId, response);
+    window.parent.postMessage({
+      protocol: PROTOCOL,
+      type: "response-action",
+      response_id: responseId,
+      ...response
     }, "*");
-    el("responseStatus").textContent = `Sent ${action} to parent runtime; persistence is not claimed until the parent confirms it.`;
+    el("responseStatus").textContent = `Sent ${action} to parent runtime; persistence is not claimed until the parent confirms this exact response.`;
   }
 
   for (const button of responseButtons) {
@@ -375,14 +384,18 @@
     }
 
     if (message.type === "response-status") {
-      if (message.event_id !== currentPacket.event_id || !RESPONSE_STATUSES.has(message.status)) return;
-      const action = RESPONSE_ACTIONS.includes(message.action) ? message.action : "response";
+      if (!RESPONSE_STATUSES.has(message.status) || typeof message.response_id !== "string") return;
+      const pending = pendingResponses.get(message.response_id);
+      if (!pending) return;
+      if (message.event_id !== pending.event_id || message.action !== pending.action) return;
+      pendingResponses.delete(message.response_id);
+
       if (message.status === "recorded") {
-        el("responseStatus").textContent = `${action} recorded by parent runtime.`;
+        el("responseStatus").textContent = `${pending.action} recorded by parent runtime.`;
       } else if (message.status === "received") {
-        el("responseStatus").textContent = `${action} received by parent runtime; persistence not confirmed.`;
+        el("responseStatus").textContent = `${pending.action} received by parent runtime; persistence not confirmed.`;
       } else {
-        el("responseStatus").textContent = `${action} rejected by parent runtime.`;
+        el("responseStatus").textContent = `${pending.action} rejected by parent runtime.`;
       }
     }
   });
