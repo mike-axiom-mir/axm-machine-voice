@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "alternative-snapshot-0.1.schema.json",
+  "title": "AXM Machine Voice Alternative Snapshot v0.1",
+  "type": "object",
+  "required": [
+    "schema",
+    "event_id",
+    "source",
+    "activity",
+    "cost_metric",
+    "required_constraints",
+    "current",
+    "alternatives",
+    "next_operations"
+  ],
+  "properties": {
+    "schema": {"const": "axm-machine-voice/alternative-snapshot/0.1"},
+    "event_id": {"type": "string", "minLength": 1},
+    "source": {"$ref": "#/$defs/ref"},
+    "activity": {"$ref": "#/$defs/ref"},
+    "cost_metric": {"$ref": "#/$defs/ref"},
+    "required_constraints": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/ref"}
+    },
+    "current": {"$ref": "#/$defs/option"},
+    "alternatives": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/option"}
+    },
+    "next_operations": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "id": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "option": {
+      "type": "object",
+      "required": ["ref", "cost", "preserves", "evidence"],
+      "properties": {
+        "ref": {"$ref": "#/$defs/ref"},
+        "cost": {"type": "number"},
+        "preserves": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/ref"}
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/ref"}
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
