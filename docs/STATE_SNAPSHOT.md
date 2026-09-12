@@ -1,12 +1,13 @@
 # State Snapshot Handoff v0.1
 
-Machine Voice can receive producer input as strict versioned JSON state snapshots instead of requiring Python code changes.
+Machine Voice receives producer input as strict versioned JSON state snapshots instead of requiring callers to edit Python.
 
 Supported schema identifiers:
 
 ```text
 axm-machine-voice/alternative-snapshot/0.1
 axm-machine-voice/conflict-snapshot/0.1
+axm-machine-voice/unresolved-snapshot/0.1
 ```
 
 Complete examples:
@@ -14,6 +15,7 @@ Complete examples:
 ```text
 examples/alternative_snapshot.example.json
 examples/conflict_snapshot.example.json
+examples/unresolved_snapshot.example.json
 ```
 
 Portable JSON Schema descriptions:
@@ -21,11 +23,10 @@ Portable JSON Schema descriptions:
 ```text
 schemas/alternative-snapshot-0.1.schema.json
 schemas/conflict-snapshot-0.1.schema.json
+schemas/unresolved-snapshot-0.1.schema.json
 ```
 
-## Why this exists
-
-The local/monolith integration needs a narrow machine-native handoff boundary:
+## Shared handoff
 
 ```text
 monolith / Machine Floor state
@@ -43,19 +44,15 @@ communication gate  ← independently supplied active runtime context
 StateTalk packet or silence/rejection
 ```
 
-The router never guesses which producer a snapshot belongs to from its filename or fields. The explicit `schema` value selects the exact adapter. Unsupported schema ids fail closed.
+The router never guesses the producer from filenames or field similarity. The explicit `schema` value selects the exact adapter. Unsupported schema ids fail closed.
 
-Adapters are intentionally strict. Unknown fields are rejected rather than ignored so a newer producer cannot accidentally send meaning that an older adapter silently drops.
+Adapters reject unknown fields instead of silently discarding meaning.
 
 ## Declared relevance is not active context
 
-Both snapshot types contain an `activity` reference. That is the producer's **declared relevance**: what the snapshot says its candidate relates to.
+Every supported snapshot contains an `activity` reference. That says what the snapshot declares its result relates to; it does **not** prove that activity is current.
 
-It is not allowed to certify that this activity is actually current.
-
-The caller separately supplies one or more active runtime references. The normal communication gate compares the snapshot's declared relevance against those independently supplied references.
-
-Therefore this remains possible for either producer:
+The caller separately supplies active runtime references. Therefore this remains valid:
 
 ```text
 snapshot says: activity:A
@@ -64,11 +61,9 @@ runtime says:  activity:B
 REJECT: not_relevant_to_active_context
 ```
 
-This separation is intentional. A speaker should not become relevant merely by claiming relevance.
+A speaker cannot make itself relevant merely by claiming relevance.
 
 ## Alternative snapshot
-
-Top-level shape:
 
 ```json
 {
@@ -84,24 +79,9 @@ Top-level shape:
 }
 ```
 
-Each option is exactly:
-
-```json
-{
-  "ref": {"kind": "state", "id": "..."},
-  "cost": 12,
-  "preserves": [{"kind": "constraint", "id": "..."}],
-  "evidence": [{"kind": "evidence", "id": "..."}]
-}
-```
-
-`cost` has no universal meaning. `cost_metric` names the metric under which every option cost in that snapshot is compared.
-
-If no strictly lower-cost alternative preserves every required constraint, the result is normal `no_candidate` silence.
+Each option supplies a reference, numeric cost under the explicitly named metric, preserved constraints, and evidence. If no strictly lower-cost alternative preserves every required constraint, the result is normal `no_candidate` silence.
 
 ## Conflict snapshot
-
-Top-level shape:
 
 ```json
 {
@@ -114,22 +94,43 @@ Top-level shape:
 }
 ```
 
-Each assertion is exactly:
+Each assertion names an exact scope, subject and property, carries a portable value, and includes evidence. It can emit only when grounded assertions share the same exact scope/subject/property but carry different values. It does not decide which assertion is true.
+
+If no exact comparable contradiction exists, the result is normal `no_candidate` silence.
+
+## Bounded unresolved snapshot
 
 ```json
 {
-  "ref": {"kind": "assertion", "id": "..."},
-  "scope": {"kind": "scope", "id": "..."},
-  "subject": {"kind": "state", "id": "..."},
-  "property": {"kind": "property", "id": "..."},
-  "value": true,
-  "evidence": [{"kind": "evidence", "id": "..."}]
+  "schema": "axm-machine-voice/unresolved-snapshot/0.1",
+  "event_id": "event-003",
+  "source": {"kind": "machine-floor", "id": "main"},
+  "activity": {"kind": "activity", "id": "current-work"},
+  "problem": {"kind": "problem", "id": "candidate-route"},
+  "search_scope": {"kind": "search-scope", "id": "run-01"},
+  "required_constraints": [],
+  "attempts": [],
+  "next_operations": ["inspect", "compare"]
 }
 ```
 
-The exact-conflict producer can emit only when at least two grounded assertions share the same explicit scope, subject, and property but have different portable values. It does not decide which assertion is true.
+Each attempt supplies a reference, the required constraints it explicitly preserves, and evidence.
 
-If no exact comparable contradiction exists, the result is normal `no_candidate` silence.
+The bounded-unresolved producer can emit only when:
+
+- at least one grounded attempt is supplied;
+- required constraints are explicit;
+- every supplied attempt misses at least one required constraint.
+
+Zero attempts is normal `no_candidate` silence. If any attempt preserves all required constraints, that is also normal `no_candidate` silence.
+
+A surfaced unresolved packet explicitly preserves the boundary:
+
+```json
+{"global_impossibility_claimed": false}
+```
+
+So `I cannot resolve this.` means only that the named supplied search did not contain a fully constraint-preserving resolution. It never means no solution exists globally.
 
 ## Shared reference object
 
@@ -143,17 +144,15 @@ No adapter infers aliases or hidden equivalence between differently named refere
 
 ## Outcomes
 
-Both adapters return the same `SnapshotOutcome` states:
+All three adapters return the same `SnapshotOutcome` states:
 
-- `emitted` — a candidate survived its producer and the communication gate and has a canonical StateTalk packet;
-- `no_candidate` — the supplied state contains nothing that producer is allowed to say; silence is normal;
-- `rejected` — a candidate existed but the communication gate refused it, for example because its declared activity is not active or its semantic fingerprint was already seen.
+- `emitted` — a candidate survived its exact producer and the communication gate;
+- `no_candidate` — the supplied state contains nothing that producer is allowed to say;
+- `rejected` — a candidate existed but the communication gate refused it.
 
-Malformed or semantically ambiguous input raises an error instead of being converted into communication.
+Malformed or semantically ambiguous input raises an error instead of being converted into plausible communication.
 
 ## Generic runtime API
-
-A caller that accepts any currently supported snapshot can use:
 
 ```python
 from axm_machine_voice import process_snapshot
@@ -166,35 +165,29 @@ Producer-specific callers can still use:
 ```python
 process_alternative_snapshot(...)
 process_conflict_snapshot(...)
+process_unresolved_snapshot(...)
 ```
 
-The original `SNAPSHOT_SCHEMA` constant remains an alias for the alternative schema for backward compatibility.
+`SNAPSHOT_SCHEMA` remains an alias for the original alternative schema for backward compatibility.
 
 ## Machine command
 
-The same zero-install command accepts either supported snapshot:
+The same zero-install command accepts all supported snapshots:
 
 ```bash
-python machine_voice.py snapshot examples/alternative_snapshot.example.json \
+python machine_voice.py snapshot examples/unresolved_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
-or:
-
-```bash
-python machine_voice.py snapshot examples/conflict_snapshot.example.json \
-  --active-ref activity:local-monolith-proof
-```
-
-The command returns the same versioned machine JSON outcome envelope regardless of producer type.
+It returns the same versioned machine JSON outcome envelope regardless of producer type.
 
 ## Local monolith proof
 
-Either snapshot can drive the same offline renderer:
+Any supported snapshot can drive the same offline renderer:
 
 ```bash
 python examples/build_local_monolith_proof.py \
-  --snapshot examples/conflict_snapshot.example.json \
+  --snapshot examples/unresolved_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
@@ -204,20 +197,10 @@ Then open:
 local/monolith_proof.generated.html
 ```
 
-The generated page labels snapshot provenance as externally supplied and **not verified by the renderer**. Rendering proves that the handoff path worked; it does not prove the external source was truthful.
-
-For a real monolith integration, `--active-ref` is only a test-harness stand-in. The runtime should supply its actual active state/context directly when calling the adapter.
+Rendering proves the handoff path worked. It does not prove the external source or evidence was truthful.
 
 ## Truth boundary
 
-The snapshot layer does not infer:
-
-- missing evidence;
-- hidden constraints;
-- metric meaning;
-- assertion equivalence across differently named scope/subject/property refs;
-- which side of a conflict is true;
-- source authenticity;
-- active relevance.
+The snapshot layer does not infer missing evidence, hidden constraints, metric meaning, assertion aliases, which side of a conflict is true, global impossibility from a bounded search, source authenticity, or active relevance.
 
 A future snapshot format that needs more meaning must use an explicit schema revision. Do not add fields and expect older readers to ignore them.
