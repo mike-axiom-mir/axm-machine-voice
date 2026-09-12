@@ -163,6 +163,24 @@ class MachineCliTests(unittest.TestCase):
         self.assertEqual(result["status"], "invalid")
         self.assertIn("non-empty", result["error"])
 
+    def test_missing_subcommand_is_machine_readable_invalid(self):
+        code, result = self.run_cli([])
+        self.assertEqual(code, 2)
+        self.assertEqual(result["status"], "invalid")
+        self.assertIn("required", result["error"])
+
+    def test_unknown_subcommand_is_machine_readable_invalid(self):
+        code, result = self.run_cli(["unknown"])
+        self.assertEqual(code, 2)
+        self.assertEqual(result["status"], "invalid")
+        self.assertIn("invalid choice", result["error"])
+
+    def test_missing_snapshot_source_is_machine_readable_invalid(self):
+        code, result = self.run_cli(["snapshot", "--active-ref", self.active])
+        self.assertEqual(code, 2)
+        self.assertEqual(result["status"], "invalid")
+        self.assertIn("source", result["error"])
+
 
 if __name__ == "__main__":
     unittest.main()
