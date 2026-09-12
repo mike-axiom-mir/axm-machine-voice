@@ -62,6 +62,14 @@
       "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
     },
     {
+      "id": "producer.criterion-outcome",
+      "description": "Deterministic paired outcome producer evaluates one grounded attempt against one explicit all-required success contract: every required criterion grounded satisfied can surface success, while any grounded failed required criterion can surface failure. Claims remain relative to the supplied contract and do not authenticate its authorship or timing.",
+      "provides": ["state.success", "state.failure", "communication.candidate"],
+      "accepts": ["state.attempt", "success.contract", "success.criterion", "criterion.observation", "state.context", "evidence"],
+      "tags": ["producer", "state", "deterministic", "success", "failure", "criteria", "evidence"],
+      "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
+    },
+    {
       "id": "interface.floorvoice",
       "description": "Offline local FloorVoice renders a fixed tiny vocabulary from StateTalk kind and supports bounded Inspect, Compare, and Acknowledge response intents without inventing actor identity.",
       "provides": ["interface.local", "interface.floorvoice", "communication.response.intent"],
@@ -123,6 +131,8 @@
       "global unavailability from a bounded missing-input inventory",
       "cause or novelty merely because an expected-vs-observed residual exceeds a supplied tolerance",
       "model invalidity or observation invalidity merely because a residual exceeds tolerance",
+      "global success or global failure from evaluation against one explicit criteria contract",
+      "authenticity, authorship, or pre-attempt timing of a supplied success criteria contract",
       "cross-module interoperability before exact composition testing",
       "actor authentication by the local FloorVoice renderer",
       "cryptographic authenticity of the local unkeyed journal"
