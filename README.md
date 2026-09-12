@@ -167,6 +167,29 @@ The snapshot contract and truth boundary are documented in [`docs/STATE_SNAPSHOT
 
 This is the intended handoff for the next monolith test: the monolith can supply a compatible snapshot and its actual active context without changing Machine Voice code.
 
+## Machine channel v0.1
+
+The human FloorVoice page is not required for machine-to-machine use. A zero-install command channel emits one versioned canonical JSON envelope and no explanatory prose:
+
+```bash
+python machine_voice.py snapshot examples/alternative_snapshot.example.json \
+  --active-ref activity:local-monolith-proof
+```
+
+Protocol:
+
+```text
+axm-machine-voice/machine-channel/0.1
+```
+
+The snapshot may also arrive over stdin, and repeated `--seen-fingerprint` values let the normal communication gate suppress already-emitted semantics.
+
+Valid protocol outcomes (`emitted`, `no_candidate`, `rejected`) use exit code `0`. Invalid input uses exit code `2` but still returns the same versioned JSON envelope. Even normal command-syntax failures are converted to machine-readable `invalid` output rather than human argparse prose.
+
+This channel adds no reasoning and no new authority. It transports the same strict snapshot → producer → gate result used by the local human surface.
+
+See [`docs/MACHINE_CHANNEL.md`](docs/MACHINE_CHANNEL.md) for the contract.
+
 ## FloorVoice v0.1
 
 The human-facing vocabulary is intentionally primitive:
@@ -216,7 +239,10 @@ real state snapshot + independent active context
         ↓
 strict adapter
         ↓
-producer -> Candidate -> communication gate -> StateTalk packet -> local/monolith renderer
+producer -> Candidate -> communication gate -> StateTalk packet
+        |                                      |
+        v                                      v
+machine JSON channel                    local human renderer
 ```
 
 The local page must continue to distinguish demo/example material from packets whose provenance points to a live producer. A small real signal with inspectable evidence is preferable to an impressive fake one.
