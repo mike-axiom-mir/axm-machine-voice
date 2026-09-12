@@ -1,0 +1,98 @@
+{
+  "schema": "axm-machine-voice/alternative-snapshot/0.1",
+  "event_id": "snapshot-example-001",
+  "source": {
+    "kind": "machine-floor",
+    "id": "snapshot-example"
+  },
+  "activity": {
+    "kind": "activity",
+    "id": "local-monolith-proof"
+  },
+  "cost_metric": {
+    "kind": "metric",
+    "id": "transition-steps"
+  },
+  "required_constraints": [
+    {
+      "kind": "constraint",
+      "id": "required-output-preserved"
+    },
+    {
+      "kind": "constraint",
+      "id": "offline-only"
+    }
+  ],
+  "current": {
+    "ref": {
+      "kind": "state",
+      "id": "current-path"
+    },
+    "cost": 12,
+    "preserves": [
+      {
+        "kind": "constraint",
+        "id": "required-output-preserved"
+      },
+      {
+        "kind": "constraint",
+        "id": "offline-only"
+      }
+    ],
+    "evidence": [
+      {
+        "kind": "evidence",
+        "id": "current-path-measurement"
+      }
+    ]
+  },
+  "alternatives": [
+    {
+      "ref": {
+        "kind": "state",
+        "id": "candidate-path-a"
+      },
+      "cost": 9,
+      "preserves": [
+        {
+          "kind": "constraint",
+          "id": "required-output-preserved"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "evidence",
+          "id": "candidate-a-measurement"
+        }
+      ]
+    },
+    {
+      "ref": {
+        "kind": "state",
+        "id": "candidate-path-b"
+      },
+      "cost": 7,
+      "preserves": [
+        {
+          "kind": "constraint",
+          "id": "required-output-preserved"
+        },
+        {
+          "kind": "constraint",
+          "id": "offline-only"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "evidence",
+          "id": "candidate-b-measurement"
+        }
+      ]
+    }
+  ],
+  "next_operations": [
+    "inspect",
+    "compare",
+    "simulate"
+  ]
+}

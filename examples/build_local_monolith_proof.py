@@ -1,11 +1,14 @@
 """Build one offline HTML proof that drives the local renderer through its bridge.
 
-The packet comes from the real deterministic producer/gate path in
-`run_deterministic_producer.py`, but its input state remains synthetic test data.
-The generated harness labels that boundary explicitly.
+Without `--snapshot`, the packet comes from the synthetic deterministic example.
+With `--snapshot`, the supplied versioned state snapshot is validated, processed by the
+real producer and communication gate, then embedded only when it actually emits.
+Snapshot relevance is checked against independently supplied `--active-ref` values.
 """
 
+from html import escape
 from pathlib import Path
+from typing import Any, Mapping
 import argparse
 import json
 import sys
@@ -15,18 +18,44 @@ EXAMPLES = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(EXAMPLES))
 
-from axm_machine_voice import packet_dict  # noqa: E402
+from axm_machine_voice import (  # noqa: E402
+    Ref,
+    outcome_dict,
+    packet_dict,
+    process_alternative_snapshot,
+)
 from run_deterministic_producer import build_packet  # noqa: E402
 
 
 BRIDGE_PROTOCOL = "axm-machine-voice/local-bridge/0.1"
 
 
-def build_html() -> str:
-    packet = packet_dict(build_packet())
+def parse_ref_key(value: str) -> Ref:
+    kind, separator, identifier = value.partition(":")
+    if not separator or not kind.strip() or not identifier.strip():
+        raise argparse.ArgumentTypeError("reference must use non-empty kind:id form")
+    return Ref(kind, identifier)
+
+
+def load_snapshot_outcome(path: Path, *, active_refs: tuple[Ref, ...]):
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, Mapping):
+        raise ValueError("Snapshot file must contain a JSON object")
+    return process_alternative_snapshot(data, active_refs=active_refs)
+
+
+def build_html(
+    packet: Mapping[str, Any] | None = None,
+    *,
+    source_label: str = "synthetic state",
+) -> str:
+    if packet is None:
+        packet = packet_dict(build_packet())
+
     # Prevent a future state/reference value containing a literal closing script tag
     # from escaping the inline JavaScript payload.
     packet_json = json.dumps(packet, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    source_label_html = escape(source_label)
 
     return f"""<!doctype html>
 <html lang=\"en\">
@@ -48,7 +77,7 @@ def build_html() -> str:
 <body>
 <header>
   <strong>Monolith bridge proof</strong>
-  <span class=\"truth\">synthetic state → real producer/gate → canonical packet → local renderer</span>
+  <span class=\"truth\">{source_label_html} → real producer/gate → canonical packet → local renderer</span>
   <span id=\"status\">waiting for renderer</span>
 </header>
 <iframe id=\"voice\" src=\"index.html\" title=\"AXM Machine Voice local renderer\"></iframe>
@@ -85,14 +114,39 @@ def build_html() -> str:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--snapshot",
+        type=Path,
+        help="Optional versioned Machine Voice state snapshot JSON. No page is generated if it produces silence/rejection.",
+    )
+    parser.add_argument(
+        "--active-ref",
+        action="append",
+        type=parse_ref_key,
+        default=[],
+        help="Independently supplied active runtime reference in kind:id form. Required at least once with --snapshot.",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=ROOT / "local" / "monolith_proof.generated.html",
         help="Generated proof page. Keep it beside local/index.html unless you adjust the iframe path.",
     )
     args = parser.parse_args()
+
+    packet = None
+    source_label = "synthetic state"
+    if args.snapshot is not None:
+        if not args.active_ref:
+            parser.error("--snapshot requires at least one independent --active-ref")
+        outcome = load_snapshot_outcome(args.snapshot, active_refs=tuple(args.active_ref))
+        if outcome.packet is None:
+            print(json.dumps(outcome_dict(outcome), indent=2, ensure_ascii=False))
+            return
+        packet = packet_dict(outcome.packet)
+        source_label = "snapshot-supplied state (external provenance not verified by renderer)"
+
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(build_html(), encoding="utf-8")
+    args.output.write_text(build_html(packet, source_label=source_label), encoding="utf-8")
     print(args.output)
 
 

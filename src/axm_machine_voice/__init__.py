@@ -19,6 +19,7 @@ from .core import (
     semantic_fingerprint,
 )
 from .producer import OptionState, produce_lower_cost_alternative
+from .snapshot import SNAPSHOT_SCHEMA, SnapshotOutcome, outcome_dict, process_alternative_snapshot
 
 __all__ = [
     "Candidate",
@@ -33,11 +34,15 @@ __all__ = [
     "ProposalStatus",
     "Ref",
     "Relation",
+    "SNAPSHOT_SCHEMA",
+    "SnapshotOutcome",
     "StateTalkPacket",
     "canonical_json",
     "emit",
     "evaluate",
+    "outcome_dict",
     "packet_dict",
+    "process_alternative_snapshot",
     "produce_lower_cost_alternative",
     "render_floorvoice",
     "semantic_fingerprint",
