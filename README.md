@@ -144,19 +144,18 @@ python examples/run_residual_producer.py
 
 See [`docs/RESIDUAL_LOOK_PRODUCER.md`](docs/RESIDUAL_LOOK_PRODUCER.md).
 
-The residual producer is intentionally Python/API-only in this lane. A strict residual snapshot schema should be added only after this producer independently survives review and CI.
-
 All bundled producer examples use synthetic state and are not live Machine Floor discoveries.
 
 ## Versioned state snapshot handoff
 
-The first four producers use one strict schema-id-routed snapshot transport:
+All five producers use one strict schema-id-routed snapshot transport:
 
 ```text
 axm-machine-voice/alternative-snapshot/0.1
 axm-machine-voice/conflict-snapshot/0.1
 axm-machine-voice/unresolved-snapshot/0.1
 axm-machine-voice/need-snapshot/0.1
+axm-machine-voice/residual-snapshot/0.1
 ```
 
 Examples:
@@ -166,6 +165,7 @@ examples/alternative_snapshot.example.json
 examples/conflict_snapshot.example.json
 examples/unresolved_snapshot.example.json
 examples/need_snapshot.example.json
+examples/residual_snapshot.example.json
 ```
 
 The caller supplies active runtime context separately. A snapshot cannot certify its own relevance.
@@ -179,7 +179,7 @@ See [`docs/STATE_SNAPSHOT.md`](docs/STATE_SNAPSHOT.md) and the portable schemas 
 One zero-install command accepts every supported snapshot schema:
 
 ```bash
-python machine_voice.py snapshot examples/need_snapshot.example.json \
+python machine_voice.py snapshot examples/residual_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
