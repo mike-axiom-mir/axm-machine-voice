@@ -71,12 +71,23 @@ class LocalSurfaceTests(unittest.TestCase):
         response_payload = text[text.index('type: "response-action"'):text.index('el("responseStatus").textContent = `Sent')]
         self.assertNotIn("actor", response_payload.lower())
 
-    def test_response_status_does_not_claim_persistence_before_parent_confirmation(self):
+    def test_each_response_has_local_id_and_confirmation_must_match_it(self):
         text = LOCAL_HTML.read_text(encoding="utf-8")
-        self.assertIn("persistence is not claimed until the parent confirms it", text)
+        self.assertIn('const responseId = `local-response-${nextResponseNumber++}`', text)
+        self.assertIn('pendingResponses.set(responseId, response)', text)
+        self.assertIn('response_id: responseId', text)
+        self.assertIn('const pending = pendingResponses.get(message.response_id)', text)
+        self.assertIn('message.event_id !== pending.event_id || message.action !== pending.action', text)
+        self.assertIn('pendingResponses.delete(message.response_id)', text)
+        self.assertIn('pendingResponses.clear()', text)
+
+    def test_response_status_does_not_claim_persistence_before_matching_parent_confirmation(self):
+        text = LOCAL_HTML.read_text(encoding="utf-8")
+        self.assertIn("persistence is not claimed until the parent confirms this exact response", text)
         self.assertIn('RESPONSE_STATUSES = new Set(["received", "recorded", "rejected"])', text)
         self.assertIn("received by parent runtime; persistence not confirmed", text)
         self.assertIn("recorded by parent runtime", text)
+        self.assertIn('typeof message.response_id !== "string"', text)
 
 
 if __name__ == "__main__":
