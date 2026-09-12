@@ -45,7 +45,7 @@ Run all tests with:
 python -m unittest discover -s tests -v
 ```
 
-## Three grounded reasons to speak
+## Four grounded reasons to speak
 
 ### `There is another way.`
 
@@ -95,6 +95,29 @@ python examples/run_unresolved_producer.py
 
 See [`docs/UNRESOLVED_PRODUCER.md`](docs/UNRESOLVED_PRODUCER.md).
 
+### `I need something.`
+
+`produce_bounded_need(...)` can surface only when a task explicitly names required inputs and one or more are absent from a named supplied inventory scope.
+
+If every required input is present, it stays silent. It never invents hidden requirements.
+
+Its canonical claim records:
+
+```json
+{
+  "bounded_inventory_only": true,
+  "global_unavailability_claimed": false
+}
+```
+
+So the phrase means only that the supplied bounded inventory is missing an explicit required input—not that the input is unavailable elsewhere.
+
+```bash
+python examples/run_need_producer.py
+```
+
+See [`docs/NEED_PRODUCER.md`](docs/NEED_PRODUCER.md).
+
 All bundled producer examples use synthetic state and are not live Machine Floor discoveries.
 
 ## Versioned state snapshot handoff
@@ -114,6 +137,8 @@ examples/alternative_snapshot.example.json
 examples/conflict_snapshot.example.json
 examples/unresolved_snapshot.example.json
 ```
+
+The new bounded-need producer is intentionally Python/API-only in this lane. A strict snapshot schema should be added only after the producer itself survives review and CI.
 
 The caller supplies active runtime context separately. A snapshot cannot certify its own relevance.
 
@@ -138,15 +163,7 @@ axm-machine-voice/machine-channel/0.1
 
 The response is one canonical JSON envelope with no explanatory prose mixed into stdout.
 
-Valid snapshot outcomes are:
-
-```text
-emitted
-no_candidate
-rejected
-```
-
-Structured journal responses return `recorded`. Invalid input returns `invalid` with exit code `2` while preserving the same versioned envelope.
+Valid snapshot outcomes are `emitted`, `no_candidate`, and `rejected`. Structured journal responses return `recorded`. Invalid input returns `invalid` with exit code `2` while preserving the same versioned envelope.
 
 See [`docs/MACHINE_CHANNEL.md`](docs/MACHINE_CHANNEL.md).
 
@@ -154,24 +171,7 @@ See [`docs/MACHINE_CHANNEL.md`](docs/MACHINE_CHANNEL.md).
 
 Only communication that actually passed the gate becomes speech history.
 
-```bash
-python machine_voice.py snapshot examples/unresolved_snapshot.example.json \
-  --active-ref activity:local-monolith-proof \
-  --journal local/communication.jsonl
-```
-
-The journal supplies prior semantic fingerprints so repeated grounded state does not keep lighting the same message.
-
-`no_candidate`, rejected candidates, and invalid input do **not** become speech history.
-
-A human, AI, game, or machine can attach a structured response only to an event that really emitted:
-
-```bash
-python machine_voice.py respond local/communication.jsonl \
-  --event-id unresolved-snapshot-example-001 \
-  --actor human:local-user \
-  --action inspect
-```
+The journal supplies prior semantic fingerprints so repeated grounded state does not keep lighting the same message. `no_candidate`, rejected candidates, and invalid input do **not** become speech history.
 
 The journal is hash-linked for local integrity checking, not cryptographic proof against a writer who can rewrite and re-hash the whole file. Actor references are structured claims, not authenticated identities.
 
@@ -179,19 +179,7 @@ See [`docs/COMMUNICATION_JOURNAL.md`](docs/COMMUNICATION_JOURNAL.md).
 
 ## Offline human surface
 
-Open:
-
-```text
-index.html
-```
-
-or directly:
-
-```text
-local/index.html
-```
-
-It requires no AI, network, account, cloud service, package install, or build step.
+Open `index.html` or `local/index.html`. It requires no AI, network, account, cloud service, package install, or build step.
 
 The human-facing vocabulary remains deliberately primitive:
 
@@ -212,29 +200,11 @@ When embedded by a parent monolith/runtime, the page can send bounded `Inspect`,
 
 See [`docs/LOCAL_MONOLITH_TEST.md`](docs/LOCAL_MONOLITH_TEST.md).
 
-## One-command local proof
-
-Any supported snapshot can drive the same offline renderer:
-
-```bash
-python examples/build_local_monolith_proof.py \
-  --snapshot examples/unresolved_snapshot.example.json \
-  --active-ref activity:local-monolith-proof
-```
-
-Then open:
-
-```text
-local/monolith_proof.generated.html
-```
-
-The proof confirms the transport/producer/gate/renderer path. It does not prove external provenance or claim the synthetic state is live.
-
 ## AXM Assembly / monolith contract
 
 `AXM_MODULE.json` declares Machine Voice natively so `axm-monolith` does not have to guess from the repository name.
 
-Declared capabilities include StateTalk, the strict state-snapshot adapter, the three deterministic producers, FloorVoice, the communication journal, and the machine JSON interface.
+Declared capabilities include StateTalk, the strict state-snapshot adapter, the deterministic producers, FloorVoice, the communication journal, and the machine JSON interface.
 
 Native declaration is stronger than heuristic discovery but is still **not** cross-module runtime verification.
 
@@ -249,6 +219,7 @@ Machine Voice does not currently claim:
 - natural-language understanding as its machine-native protocol;
 - which side of a surfaced conflict is true;
 - global impossibility from a bounded unresolved search;
+- global unavailability from a bounded missing-input inventory;
 - that a surfaced alternative is correct or canonical;
 - truth of externally supplied evidence merely because it renders;
 - actor authentication by the local page;
@@ -256,20 +227,6 @@ Machine Voice does not currently claim:
 - cross-module interoperability before exact composition testing;
 - that bundled demos or synthetic examples are live discoveries.
 
-The next real milestone is unchanged: replace synthetic snapshot inputs with actual monolith/Machine Floor state while preserving the same strict path.
-
-```text
-real versioned state snapshot + independent active context
-        ↓
-strict schema-id router
-        ↓
-exact deterministic producer
-        ↓
-communication gate
-        ↓
-canonical StateTalk
-   ↙        ↓        ↘
-journal  machine JSON  FloorVoice
-```
+The next real integration milestone remains replacing synthetic snapshot inputs with actual monolith/Machine Floor state while preserving the same strict path.
 
 The aim remains simple: **give grounded machine structure a truthful way to point.**
