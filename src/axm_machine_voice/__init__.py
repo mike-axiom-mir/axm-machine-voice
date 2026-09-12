@@ -38,10 +38,12 @@ from .snapshot import (
     process_conflict_snapshot,
     process_snapshot,
 )
+from .unresolved import AttemptState, produce_bounded_unresolved
 
 __all__ = [
     "ALTERNATIVE_SNAPSHOT_SCHEMA",
     "AssertionState",
+    "AttemptState",
     "CONFLICT_SNAPSHOT_SCHEMA",
     "Candidate",
     "Claim",
@@ -71,6 +73,7 @@ __all__ = [
     "process_alternative_snapshot",
     "process_conflict_snapshot",
     "process_snapshot",
+    "produce_bounded_unresolved",
     "produce_exact_conflict",
     "produce_lower_cost_alternative",
     "read_journal",
