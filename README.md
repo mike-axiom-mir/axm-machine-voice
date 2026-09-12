@@ -71,7 +71,7 @@ python -m unittest discover -s tests -v
 
 ## Deterministic producers
 
-Machine Voice currently has two real narrow reasons to speak.
+Machine Voice currently has three real narrow reasons to speak.
 
 ### Lower-cost alternative
 
@@ -135,7 +135,42 @@ python examples/run_conflict_producer.py
 
 See [`docs/CONFLICT_PRODUCER.md`](docs/CONFLICT_PRODUCER.md).
 
-Both examples use synthetic state and are not live Machine Floor discoveries. Their resulting packets can be opened in the same offline `local/index.html` renderer.
+### Bounded unresolved search
+
+`src/axm_machine_voice/unresolved.py` implements a bounded failure-to-resolve detector.
+
+It can surface:
+
+```text
+I cannot resolve this.
+```
+
+only when:
+
+- an explicit problem and search scope are named;
+- at least one grounded attempt was supplied;
+- one or more required constraints are explicit;
+- **every supplied attempt** misses at least one required constraint.
+
+Zero attempts stays silent. If even one attempt preserves every required constraint, it stays silent.
+
+The canonical claim explicitly records:
+
+```json
+{"global_impossibility_claimed": false}
+```
+
+So the phrase never means “no solution exists.” It means the supplied bounded search did not contain a fully constraint-preserving resolution.
+
+Runnable example:
+
+```bash
+python examples/run_unresolved_producer.py
+```
+
+See [`docs/UNRESOLVED_PRODUCER.md`](docs/UNRESOLVED_PRODUCER.md).
+
+All producer examples use synthetic state and are not live Machine Floor discoveries. Their resulting packets can be opened in the same offline `local/index.html` renderer.
 
 ## Offline local test surface
 
@@ -188,7 +223,7 @@ The default input is still **synthetic test state** and the generated page says 
 
 Machine Voice accepts strict versioned snapshots instead of requiring callers to edit Python.
 
-Currently supported:
+Currently supported through the generic router:
 
 ```text
 axm-machine-voice/alternative-snapshot/0.1
@@ -202,7 +237,9 @@ examples/alternative_snapshot.example.json
 examples/conflict_snapshot.example.json
 ```
 
-The same proof command accepts either snapshot because routing is based on the explicit schema id:
+The bounded unresolved producer is currently available through the Python API/runnable example; its strict snapshot handoff is the next transport extension rather than being falsely claimed here.
+
+The same proof command accepts either supported snapshot because routing is based on the explicit schema id:
 
 ```bash
 python examples/build_local_monolith_proof.py \
@@ -306,6 +343,7 @@ No proposal becomes canon because it was surfaced.
 - generate explanatory prose;
 - grant the Machine Floor merge authority;
 - decide which side of a surfaced conflict is true;
+- claim global impossibility from a bounded unresolved search;
 - decide that a surfaced proposal is correct;
 - execute arbitrary proposal contents;
 - verify the external provenance of a snapshot merely because its schema is valid;
