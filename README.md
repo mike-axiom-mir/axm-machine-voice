@@ -184,7 +184,7 @@ axm-machine-voice/machine-channel/0.1
 
 The snapshot may also arrive over stdin, and repeated `--seen-fingerprint` values let the normal communication gate suppress already-emitted semantics.
 
-Valid protocol outcomes (`emitted`, `no_candidate`, `rejected`) use exit code `0`. Invalid input uses exit code `2` but still returns the same versioned JSON envelope. Even normal command-syntax failures are converted to machine-readable `invalid` output rather than human argparse prose.
+Valid snapshot outcomes (`emitted`, `no_candidate`, `rejected`) use exit code `0`. Structured journal responses return `recorded`. Invalid input uses exit code `2` but still returns the same versioned JSON envelope. Even normal command-syntax failures are converted to machine-readable `invalid` output rather than human argparse prose.
 
 This channel adds no reasoning and no new authority. It transports the same strict snapshot → producer → gate result used by the local human surface.
 
@@ -214,7 +214,9 @@ python machine_voice.py respond local/communication.jsonl \
   --target state:candidate-path-b
 ```
 
-Journal records are hash-chained, making retained history tamper-evident against edits or reordering. This is deliberately **not** claimed to prove that an intact tail was never deleted; that would require an external checkpoint.
+Journal records are hash-linked. The chain catches accidental/un-rehashed edits and ordering damage, but it is **not** cryptographic proof against a writer who can rewrite the file and recompute hashes, and it cannot prove an intact tail was never deleted. Stronger claims require an external checkpoint/signature layer.
+
+Response actor references are structured claims supplied by the caller; v0.1 does not authenticate them.
 
 v0.1 assumes one journal writer at a time.
 
@@ -256,6 +258,8 @@ No proposal becomes canon because it was surfaced.
 - execute arbitrary proposal contents;
 - verify the external provenance of a snapshot merely because its schema is valid;
 - let a snapshot certify its own relevance to the current runtime state;
+- authenticate a journal response actor;
+- prove the local journal was never maliciously rewritten/re-hashed;
 - prove an intact journal tail was never deleted;
 - claim the bundled local demo or synthetic producer example is a live discovery.
 
