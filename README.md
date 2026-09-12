@@ -68,9 +68,29 @@ Run the tests with:
 python -m unittest discover -s tests -v
 ```
 
+## First deterministic producer
+
+`src/axm_machine_voice/producer.py` adds the first real producer capability: a lower-cost alternative detector over explicitly supplied state.
+
+It can surface `There is another way.` only when supplied evidence proves that a candidate option:
+
+- has strictly lower supplied cost than the current option;
+- explicitly preserves every required constraint;
+- carries inspectable evidence.
+
+The producer does not infer hidden constraints, invent preferences, generate prose, or declare the alternative correct. It returns a `Candidate`; the normal communication gate must still accept that candidate before a StateTalk packet exists.
+
+Run the full producer-to-packet example with:
+
+```bash
+python examples/run_deterministic_producer.py
+```
+
+The generated packet can be opened in `local/index.html`. The example state is synthetic and labeled as such; the producer and gate path are the real implementation under test.
+
 ## Offline local test surface
 
-The repository now includes a zero-dependency local test page:
+The repository includes a zero-dependency local test page:
 
 ```text
 local/index.html
@@ -124,28 +144,26 @@ No proposal becomes canon because it was surfaced.
 
 ## What this does not do yet
 
-- discover ideas by itself;
+- autonomously discover arbitrary ideas;
 - interpret Dutch, English, or other human language;
 - infer consciousness, preference, or intent;
 - generate explanatory prose;
 - grant the Machine Floor merge authority;
 - decide that a surfaced proposal is correct;
 - execute arbitrary proposal contents;
-- claim the bundled local demo is a live discovery.
+- claim the bundled local demo or synthetic producer example is a live discovery.
 
-Those boundaries are intentional. Discovery producers and richer state capabilities can be connected later without changing the truth boundary.
+Those boundaries are intentional. Richer state capabilities can be connected later without changing the truth boundary.
 
-## Next proof target
+## Monolith proof target
 
-The next meaningful milestone is not a more impressive phrase. It is a real deterministic producer feeding one grounded packet into the same local surface used by the monolith test.
-
-A small conflict, alternative, repeated state relationship, or unresolved condition with inspectable evidence is preferable to a complicated demonstration. The experiment should first prove that real machine-state structure can travel through:
+The next milestone is to replace the synthetic state in the runnable producer example with state supplied by an actual monolith/Machine Floor integration while preserving the same path:
 
 ```text
-producer -> Candidate -> communication gate -> StateTalk packet -> local/monolith renderer
+real state producer -> Candidate -> communication gate -> StateTalk packet -> local/monolith renderer
 ```
 
-without adding invented meaning along the way.
+The local page must continue to distinguish demo/example material from packets whose provenance points to a live producer. A small real signal with inspectable evidence is preferable to an impressive fake one.
 
 ## Why keep the reference space open?
 

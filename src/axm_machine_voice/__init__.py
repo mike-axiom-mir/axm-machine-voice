@@ -18,6 +18,7 @@ from .core import (
     render_floorvoice,
     semantic_fingerprint,
 )
+from .producer import OptionState, produce_lower_cost_alternative
 
 __all__ = [
     "Candidate",
@@ -27,6 +28,7 @@ __all__ = [
     "GateContext",
     "GateDecision",
     "JsonlEventLog",
+    "OptionState",
     "ProposalMap",
     "ProposalStatus",
     "Ref",
@@ -36,6 +38,7 @@ __all__ = [
     "emit",
     "evaluate",
     "packet_dict",
+    "produce_lower_cost_alternative",
     "render_floorvoice",
     "semantic_fingerprint",
 ]
