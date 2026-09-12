@@ -49,15 +49,16 @@ A state change is not automatically communication. A diagnostic log is not autom
 
 ## v0.1 core
 
-The first working slice is deliberately small and standard-library-only:
+The working slice remains deliberately small and standard-library-only:
 
 - open typed references so future capabilities can point to objects we did not anticipate;
 - structured claims and Proposal Maps;
-- a deterministic communication gate;
+- deterministic communication producers and gate;
 - semantic duplicate detection;
 - canonical StateTalk packets;
 - a fixed ten-phrase FloorVoice layer;
 - append-only communication history;
+- strict versioned machine snapshot handoff;
 - tests for truth-boundary failures.
 
 The implementation lives in [`src/axm_machine_voice`](src/axm_machine_voice), and the protocol is documented in [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
@@ -68,11 +69,21 @@ Run the tests with:
 python -m unittest discover -s tests -v
 ```
 
-## First deterministic producer
+## Deterministic producers
 
-`src/axm_machine_voice/producer.py` adds the first real producer capability: a lower-cost alternative detector over explicitly supplied state.
+Machine Voice currently has two real narrow reasons to speak.
 
-It can surface `There is another way.` only when supplied evidence proves that a candidate option:
+### Lower-cost alternative
+
+`src/axm_machine_voice/producer.py` implements a lower-cost alternative detector over explicitly supplied state.
+
+It can surface:
+
+```text
+There is another way.
+```
+
+only when supplied evidence proves that a candidate option:
 
 - has strictly lower supplied cost than the current option under one explicitly named metric;
 - explicitly preserves every required constraint;
@@ -80,15 +91,51 @@ It can surface `There is another way.` only when supplied evidence proves that a
 
 The metric itself is a state reference, so the packet can show what the compared numbers mean instead of silently assuming that two numeric values are comparable.
 
-The producer does not infer hidden constraints, invent preferences, generate prose, or declare the alternative correct. It returns a `Candidate`; the normal communication gate must still accept that candidate before a StateTalk packet exists.
+The producer does not infer hidden constraints, invent preferences, generate prose, or declare the alternative correct.
 
-Run the full producer-to-packet example with:
+Runnable example:
 
 ```bash
 python examples/run_deterministic_producer.py
 ```
 
-The generated packet can be opened in `local/index.html`. The example state is synthetic and labeled as such; the producer and gate path are the real implementation under test.
+### Exact conflict
+
+`src/axm_machine_voice/conflict.py` implements an exact grounded contradiction detector.
+
+It can surface:
+
+```text
+These do not fit.
+```
+
+only when two grounded assertions share exactly the same:
+
+```text
+scope
+subject
+property
+```
+
+but carry different portable values.
+
+It preserves both evidence sets and explicitly stores:
+
+```json
+{"winner": null}
+```
+
+Different scope, subject, or property stays silent. The producer does not decide which assertion is true, why they disagree, or how to repair the conflict.
+
+Runnable example:
+
+```bash
+python examples/run_conflict_producer.py
+```
+
+See [`docs/CONFLICT_PRODUCER.md`](docs/CONFLICT_PRODUCER.md).
+
+Both examples use synthetic state and are not live Machine Floor discoveries. Their resulting packets can be opened in the same offline `local/index.html` renderer.
 
 ## Offline local test surface
 
@@ -121,7 +168,7 @@ The renderer remains downstream of the core truth boundary: **rendering a packet
 
 ### One-command monolith proof
 
-To exercise the complete current path without a server:
+To exercise the default complete path without a server:
 
 ```bash
 python examples/build_local_monolith_proof.py
@@ -139,40 +186,44 @@ The default input is still **synthetic test state** and the generated page says 
 
 ### Versioned state snapshot handoff
 
-The producer can also receive state through a strict JSON snapshot instead of hard-coded Python:
+Machine Voice accepts strict versioned snapshots instead of requiring callers to edit Python.
+
+Currently supported:
 
 ```text
 axm-machine-voice/alternative-snapshot/0.1
+axm-machine-voice/conflict-snapshot/0.1
 ```
 
-Example:
+Examples:
 
 ```text
 examples/alternative_snapshot.example.json
+examples/conflict_snapshot.example.json
 ```
 
-Run that snapshot through the exact same local proof path, while supplying the runtime's active context separately:
+The same proof command accepts either snapshot because routing is based on the explicit schema id:
 
 ```bash
 python examples/build_local_monolith_proof.py \
-  --snapshot examples/alternative_snapshot.example.json \
+  --snapshot examples/conflict_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
-The snapshot's `activity` says what the producer believes its finding relates to. It does **not** certify that activity as current. The communication gate compares that declaration with independently supplied active runtime references; a mismatch is rejected as `not_relevant_to_active_context`.
+Every snapshot's `activity` says what the producer believes its finding relates to. It does **not** certify that activity as current. The communication gate compares that declaration with independently supplied active runtime references; a mismatch is rejected as `not_relevant_to_active_context`.
 
-The adapter also rejects unknown fields rather than silently discarding meaning. `no_candidate` is a normal silence state; a packet is produced only when the supplied state qualifies and the communication gate accepts it.
+Adapters reject unknown fields rather than silently discarding meaning. `no_candidate` is normal silence; a packet is produced only when the selected producer finds something it is explicitly allowed to say and the communication gate accepts it.
 
-The snapshot contract and truth boundary are documented in [`docs/STATE_SNAPSHOT.md`](docs/STATE_SNAPSHOT.md).
+The snapshot contracts and truth boundaries are documented in [`docs/STATE_SNAPSHOT.md`](docs/STATE_SNAPSHOT.md).
 
-This is the intended handoff for the next monolith test: the monolith can supply a compatible snapshot and its actual active context without changing Machine Voice code.
+This is the intended handoff for the next monolith test: the monolith can supply a supported snapshot and its actual active context without changing Machine Voice code.
 
 ## Machine channel v0.1
 
 The human FloorVoice page is not required for machine-to-machine use. A zero-install command channel emits one versioned canonical JSON envelope and no explanatory prose:
 
 ```bash
-python machine_voice.py snapshot examples/alternative_snapshot.example.json \
+python machine_voice.py snapshot examples/conflict_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
@@ -182,11 +233,11 @@ Protocol:
 axm-machine-voice/machine-channel/0.1
 ```
 
-The snapshot may also arrive over stdin, and repeated `--seen-fingerprint` values let the normal communication gate suppress already-emitted semantics.
+The same `snapshot` command accepts every explicitly supported snapshot schema. Snapshots may also arrive over stdin, and repeated `--seen-fingerprint` values let the normal communication gate suppress already-emitted semantics.
 
 Valid snapshot outcomes (`emitted`, `no_candidate`, `rejected`) use exit code `0`. Structured journal responses return `recorded`. Invalid input uses exit code `2` but still returns the same versioned JSON envelope. Even normal command-syntax failures are converted to machine-readable `invalid` output rather than human argparse prose.
 
-This channel adds no reasoning and no new authority. It transports the same strict snapshot → producer → gate result used by the local human surface.
+This channel adds no reasoning and no new authority. It transports the same strict snapshot → exact producer → gate result used by the local human surface.
 
 See [`docs/MACHINE_CHANNEL.md`](docs/MACHINE_CHANNEL.md) for the contract.
 
@@ -195,7 +246,7 @@ See [`docs/MACHINE_CHANNEL.md`](docs/MACHINE_CHANNEL.md) for the contract.
 Machine Voice can preserve only the communications that actually passed the gate in a local append-only journal:
 
 ```bash
-python machine_voice.py snapshot examples/alternative_snapshot.example.json \
+python machine_voice.py snapshot examples/conflict_snapshot.example.json \
   --active-ref activity:local-monolith-proof \
   --journal local/communication.jsonl
 ```
@@ -208,10 +259,10 @@ A human, AI, game, or machine can attach a structured response only to an event 
 
 ```bash
 python machine_voice.py respond local/communication.jsonl \
-  --event-id snapshot-example-001 \
+  --event-id conflict-snapshot-example-001 \
   --actor human:local-user \
   --action inspect \
-  --target state:candidate-path-b
+  --target assertion:sensor-a
 ```
 
 Journal records are hash-linked. The chain catches accidental/un-rehashed edits and ordering damage, but it is **not** cryptographic proof against a writer who can rewrite the file and recompute hashes, and it cannot prove an intact tail was never deleted. Stronger claims require an external checkpoint/signature layer.
@@ -254,6 +305,7 @@ No proposal becomes canon because it was surfaced.
 - infer consciousness, preference, or intent;
 - generate explanatory prose;
 - grant the Machine Floor merge authority;
+- decide which side of a surfaced conflict is true;
 - decide that a surfaced proposal is correct;
 - execute arbitrary proposal contents;
 - verify the external provenance of a snapshot merely because its schema is valid;
@@ -261,20 +313,22 @@ No proposal becomes canon because it was surfaced.
 - authenticate a journal response actor;
 - prove the local journal was never maliciously rewritten/re-hashed;
 - prove an intact journal tail was never deleted;
-- claim the bundled local demo or synthetic producer example is a live discovery.
+- claim the bundled local demo or synthetic producer examples are live discoveries.
 
 Those boundaries are intentional. Richer state capabilities can be connected later without changing the truth boundary.
 
 ## Monolith proof target
 
-The next milestone is to replace the bundled example snapshot with state exported by an actual monolith/Machine Floor integration while preserving the same path:
+The next milestone is to replace the bundled example snapshots with state exported by an actual monolith/Machine Floor integration while preserving the same path:
 
 ```text
-real state snapshot + independent active context
+real versioned state snapshot + independent active context
         ↓
-strict adapter
+strict schema-id router
         ↓
-producer -> Candidate -> communication gate -> StateTalk packet
+exact deterministic producer
+        ↓
+Candidate -> communication gate -> StateTalk packet
         |                    |                 |
         v                    v                 v
 communication journal   machine JSON      local human renderer
