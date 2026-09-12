@@ -79,7 +79,6 @@ def produce_bounded_need(
         raise ValueError("inventory_evidence must contain unique references")
 
     available_by_key = {item.ref.key: item for item in available_inputs}
-    required_keys = {ref.key for ref in required}
     missing = tuple(ref for ref in required if ref.key not in available_by_key)
     if not missing:
         return None
@@ -95,7 +94,11 @@ def produce_bounded_need(
     evidence = _sorted_unique_refs(
         (
             *inventory_evidence_sorted,
-            *(evidence_ref for item in present_required for evidence_ref in item.evidence),
+            *(
+                evidence_ref
+                for item in present_required
+                for evidence_ref in _sorted_unique_refs(item.evidence)
+            ),
         )
     )
 
@@ -121,7 +124,10 @@ def produce_bounded_need(
     )
     relations.extend(Relation(inventory_scope, "supported_by", ref) for ref in inventory_evidence_sorted)
     for item in present_required:
-        relations.extend(Relation(item.ref, "supported_by", ref) for ref in item.evidence)
+        relations.extend(
+            Relation(item.ref, "supported_by", ref)
+            for ref in _sorted_unique_refs(item.evidence)
+        )
 
     return Candidate(
         event_id=event_id,
