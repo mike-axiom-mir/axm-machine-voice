@@ -37,8 +37,10 @@ class ResidualLookContractTests(unittest.TestCase):
         )
 
         look_start = readme.index("### `Look here.`")
-        transport_start = readme.index("## Versioned state snapshot handoff", look_start)
-        look_section = readme[look_start:transport_start]
+        look_section = readme[look_start:]
+        next_heading = look_section.find("\n### ", 4)
+        if next_heading != -1:
+            look_section = look_section[:next_heading]
         self.assertNotIn("Python/API-only in this lane", look_section)
 
 
