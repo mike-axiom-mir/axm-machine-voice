@@ -8,7 +8,8 @@ from typing import Any, Mapping, Sequence
 
 from .core import Ref, canonical_json
 from .journal import append_emission, append_response, emitted_fingerprints
-from .snapshot import outcome_dict, process_snapshot
+from .snapshot import outcome_dict
+from .snapshot_router import process_snapshot
 
 
 MACHINE_CHANNEL_PROTOCOL = "axm-machine-voice/machine-channel/0.1"

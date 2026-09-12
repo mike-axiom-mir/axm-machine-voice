@@ -153,6 +153,31 @@ python examples/run_history_producer.py
 
 The bundled example produces one synthetic repeat packet and one synthetic bounded-novelty packet. It is not a live Machine Floor discovery.
 
-## Transport boundary
+## Shared snapshot transport
 
-v0.1 producer review comes first. A strict versioned history snapshot should be added only after this paired producer independently passes review and CI, following the same pattern as the earlier Machine Voice capabilities.
+The paired producer now also accepts one strict versioned JSON state handoff:
+
+```text
+axm-machine-voice/history-snapshot/0.1
+```
+
+Synthetic examples:
+
+```text
+examples/history_snapshot.example.json
+examples/history_novel_snapshot.example.json
+```
+
+Both examples use the same schema. The repeat example intentionally sets `complete_for_domain` false and still emits because it contains an exact grounded prior match. The novelty example has no exact match and sets `complete_for_domain` true.
+
+The snapshot transport does not change the producer's asymmetry:
+
+```text
+exact grounded match                         → This happened before.
+no exact match + complete_for_domain true   → This is new.
+no exact match + incomplete history         → silence
+```
+
+The transport also does not authenticate history completeness, chronological ordering, evidence truth, or global/scientific novelty. Runtime relevance is supplied independently outside the snapshot.
+
+The generic machine/API route remains `process_snapshot(...)`; callers that need this adapter directly may use `process_history_snapshot(...)`.
