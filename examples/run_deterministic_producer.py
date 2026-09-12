@@ -1,8 +1,9 @@
 """Run one deterministic producer end to end and export a local-test packet.
 
 The state below is deliberately example data. The producer itself is real: it compares
-explicit costs and required constraints, returns no Candidate when the proof is absent,
-and passes any Candidate through the normal Machine Voice communication gate.
+explicit costs under one explicit metric and required constraints, returns no Candidate
+when the proof is absent, and passes any Candidate through the normal Machine Voice
+communication gate.
 """
 
 from pathlib import Path
@@ -27,6 +28,7 @@ from axm_machine_voice import (  # noqa: E402
 def build_packet():
     floor = Ref("machine-floor", "monolith-test")
     activity = Ref("activity", "monolith-local-test")
+    transition_steps = Ref("metric", "transition-steps")
     output_preserved = Ref("constraint", "required-output-preserved")
     offline_only = Ref("constraint", "offline-only")
 
@@ -55,6 +57,7 @@ def build_packet():
         event_id="deterministic-producer-demo-001",
         source=floor,
         activity=activity,
+        cost_metric=transition_steps,
         current=current,
         alternatives=alternatives,
         required_constraints=(output_preserved, offline_only),
