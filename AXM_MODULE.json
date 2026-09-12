@@ -78,6 +78,14 @@
       "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
     },
     {
+      "id": "producer.grounded-notice",
+      "description": "Deterministic generic notice producer can surface that an explicitly named grounded notice rule fired on an explicitly referenced observation with explicit evidence. It does not infer importance, anomaly, novelty, cause, success, failure, recommendation, or other interpretation.",
+      "provides": ["state.notice", "communication.candidate"],
+      "accepts": ["state.observation", "notice.rule", "notice.trigger", "state.context", "evidence"],
+      "tags": ["producer", "state", "deterministic", "notice", "detector", "evidence"],
+      "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
+    },
+    {
       "id": "interface.floorvoice",
       "description": "Offline local FloorVoice renders a fixed tiny vocabulary from StateTalk kind and supports bounded Inspect, Compare, and Acknowledge response intents without inventing actor identity.",
       "provides": ["interface.local", "interface.floorvoice", "communication.response.intent"],
@@ -143,6 +151,7 @@
       "authenticity, authorship, or pre-attempt timing of a supplied success criteria contract",
       "global or scientific novelty from absence in one supplied history scope",
       "authenticated completeness or chronological ordering of a supplied history scope",
+      "importance, anomaly, novelty, cause, success, failure, recommendation, or interpretation merely because a generic notice rule fired",
       "cross-module interoperability before exact composition testing",
       "actor authentication by the local FloorVoice renderer",
       "cryptographic authenticity of the local unkeyed journal"
