@@ -64,6 +64,27 @@
       "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
     },
     {
+      "id": "producer.exact-conflict",
+      "description": "Deterministic producer can surface an explicit conflict only when grounded assertions share exactly the same scope, subject and property while carrying different portable values; it does not decide which assertion is true.",
+      "provides": [
+        "state.conflict",
+        "communication.candidate"
+      ],
+      "accepts": [
+        "state.assertion",
+        "state.context",
+        "evidence"
+      ],
+      "tags": [
+        "producer",
+        "state",
+        "deterministic",
+        "conflict",
+        "evidence"
+      ],
+      "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
+    },
+    {
       "id": "interface.floorvoice",
       "description": "Offline local FloorVoice renders a fixed tiny vocabulary from StateTalk kind and supports bounded Inspect, Compare, and Acknowledge response intents without inventing actor identity.",
       "provides": [
@@ -146,7 +167,7 @@
     {
       "kind": "unittest",
       "command": "python -m unittest discover -s tests -v",
-      "scope": "core, producer, snapshot adapter, machine channel, communication journal, local bridge"
+      "scope": "core, deterministic producers, snapshot adapter, machine channel, communication journal, local bridge"
     }
   ],
   "truth_boundary": {
@@ -154,6 +175,7 @@
       "consciousness or human-like intent",
       "general autonomous idea discovery",
       "truth of externally supplied evidence merely because a packet renders",
+      "resolution of which side of a surfaced conflict is true",
       "cross-module interoperability before exact composition testing",
       "actor authentication by the local FloorVoice renderer",
       "cryptographic authenticity of the local unkeyed journal"
