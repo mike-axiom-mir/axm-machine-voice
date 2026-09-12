@@ -1,0 +1,34 @@
+{
+  "schema": "axm-machine-voice/history-snapshot/0.1",
+  "event_id": "history-snapshot-repeat-001",
+  "source": {"kind": "machine-floor", "id": "main"},
+  "activity": {"kind": "activity", "id": "local-monolith-proof"},
+  "current": {
+    "ref": {"kind": "pattern", "id": "current-timeout"},
+    "domain": {"kind": "pattern-domain", "id": "build-failure-shape"},
+    "signature": {"error": "timeout", "stage": 2},
+    "evidence": [{"kind": "evidence", "id": "current-timeout-log"}]
+  },
+  "history_scope": {
+    "ref": {"kind": "history-scope", "id": "prior-build-events"},
+    "complete_for_domain": false,
+    "evidence": [{"kind": "evidence", "id": "history-index"}]
+  },
+  "history": [
+    {
+      "ref": {"kind": "historical-pattern", "id": "older-crash"},
+      "position": 1,
+      "domain": {"kind": "pattern-domain", "id": "build-failure-shape"},
+      "signature": {"error": "crash", "stage": 2},
+      "evidence": [{"kind": "evidence", "id": "older-crash-log"}]
+    },
+    {
+      "ref": {"kind": "historical-pattern", "id": "older-timeout"},
+      "position": 2,
+      "domain": {"kind": "pattern-domain", "id": "build-failure-shape"},
+      "signature": {"error": "timeout", "stage": 2},
+      "evidence": [{"kind": "evidence", "id": "older-timeout-log"}]
+    }
+  ],
+  "next_operations": ["inspect", "compare"]
+}
