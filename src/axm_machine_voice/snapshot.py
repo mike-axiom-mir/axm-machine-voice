@@ -5,6 +5,7 @@ from typing import Any, Mapping
 
 from .conflict import AssertionState, produce_exact_conflict
 from .core import GateContext, GateDecision, Ref, StateTalkPacket, emit, evaluate, packet_dict
+from .need import AvailableInputState, produce_bounded_need
 from .producer import OptionState, produce_lower_cost_alternative
 from .unresolved import AttemptState, produce_bounded_unresolved
 
@@ -12,6 +13,7 @@ from .unresolved import AttemptState, produce_bounded_unresolved
 ALTERNATIVE_SNAPSHOT_SCHEMA = "axm-machine-voice/alternative-snapshot/0.1"
 CONFLICT_SNAPSHOT_SCHEMA = "axm-machine-voice/conflict-snapshot/0.1"
 UNRESOLVED_SNAPSHOT_SCHEMA = "axm-machine-voice/unresolved-snapshot/0.1"
+NEED_SNAPSHOT_SCHEMA = "axm-machine-voice/need-snapshot/0.1"
 # Backwards-compatible name used by the original alternative-snapshot API/tests.
 SNAPSHOT_SCHEMA = ALTERNATIVE_SNAPSHOT_SCHEMA
 
@@ -94,6 +96,15 @@ def _attempt(value: Any, path: str) -> AttemptState:
     return AttemptState(
         ref=_ref(obj["ref"], f"{path}.ref"),
         preserves=_refs(obj["preserves"], f"{path}.preserves"),
+        evidence=_refs(obj["evidence"], f"{path}.evidence"),
+    )
+
+
+def _available_input(value: Any, path: str) -> AvailableInputState:
+    obj = _mapping(value, path)
+    _exact_keys(obj, {"ref", "evidence"}, path)
+    return AvailableInputState(
+        ref=_ref(obj["ref"], f"{path}.ref"),
         evidence=_refs(obj["evidence"], f"{path}.evidence"),
     )
 
@@ -301,6 +312,71 @@ def process_unresolved_snapshot(
     )
 
 
+def process_need_snapshot(
+    snapshot: Mapping[str, Any],
+    *,
+    active_refs: tuple[Ref, ...],
+    seen_fingerprints: frozenset[str] = frozenset(),
+) -> SnapshotOutcome:
+    """Validate one bounded-need snapshot and run it through producer + gate.
+
+    The snapshot names explicit required inputs and a bounded supplied inventory. It cannot
+    infer hidden requirements or certify its own active relevance.
+    """
+
+    _require_active_refs(active_refs)
+    obj = _mapping(snapshot, "snapshot")
+    expected = {
+        "schema",
+        "event_id",
+        "source",
+        "activity",
+        "task",
+        "inventory_scope",
+        "required_inputs",
+        "available_inputs",
+        "inventory_evidence",
+        "next_operations",
+    }
+    _exact_keys(obj, expected, "snapshot")
+
+    schema = _text(obj["schema"], "snapshot.schema")
+    if schema != NEED_SNAPSHOT_SCHEMA:
+        raise ValueError(f"Unsupported snapshot schema: {schema}")
+
+    available_raw = obj["available_inputs"]
+    if not isinstance(available_raw, list):
+        raise ValueError("snapshot.available_inputs must be an array")
+
+    source = _ref(obj["source"], "snapshot.source")
+    declared_activity = _ref(obj["activity"], "snapshot.activity")
+    candidate = produce_bounded_need(
+        event_id=_text(obj["event_id"], "snapshot.event_id"),
+        source=source,
+        activity=declared_activity,
+        task=_ref(obj["task"], "snapshot.task"),
+        inventory_scope=_ref(obj["inventory_scope"], "snapshot.inventory_scope"),
+        required_inputs=_refs(obj["required_inputs"], "snapshot.required_inputs"),
+        available_inputs=tuple(
+            _available_input(item, f"snapshot.available_inputs[{index}]")
+            for index, item in enumerate(available_raw)
+        ),
+        inventory_evidence=_refs(obj["inventory_evidence"], "snapshot.inventory_evidence"),
+        next_operations=_operations(obj["next_operations"], "snapshot.next_operations"),
+    )
+
+    if candidate is None:
+        return SnapshotOutcome(
+            status="no_candidate",
+            reasons=("bounded_inventory_contains_all_required_inputs",),
+        )
+    return _gate_candidate(
+        candidate,
+        active_refs=active_refs,
+        seen_fingerprints=seen_fingerprints,
+    )
+
+
 def process_snapshot(
     snapshot: Mapping[str, Any],
     *,
@@ -325,6 +401,12 @@ def process_snapshot(
         )
     if schema == UNRESOLVED_SNAPSHOT_SCHEMA:
         return process_unresolved_snapshot(
+            obj,
+            active_refs=active_refs,
+            seen_fingerprints=seen_fingerprints,
+        )
+    if schema == NEED_SNAPSHOT_SCHEMA:
+        return process_need_snapshot(
             obj,
             active_refs=active_refs,
             seen_fingerprints=seen_fingerprints,
