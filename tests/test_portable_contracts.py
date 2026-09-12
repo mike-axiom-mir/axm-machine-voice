@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from axm_machine_voice import (  # noqa: E402
     CONFLICT_SNAPSHOT_SCHEMA,
     FLOORVOICE,
+    HISTORY_SNAPSHOT_SCHEMA,
     JOURNAL_PROTOCOL,
     NEED_SNAPSHOT_SCHEMA,
     OUTCOME_SNAPSHOT_SCHEMA,
@@ -46,6 +47,7 @@ class PortableContractTests(unittest.TestCase):
             "need-snapshot-0.1.schema.json",
             "residual-snapshot-0.1.schema.json",
             "outcome-snapshot-0.1.schema.json",
+            "history-snapshot-0.1.schema.json",
             "local-bridge-0.1.schema.json",
             "machine-channel-0.1.schema.json",
             "communication-journal-0.1.schema.json",
@@ -64,13 +66,15 @@ class PortableContractTests(unittest.TestCase):
         need = self.load("need-snapshot-0.1.schema.json")
         residual = self.load("residual-snapshot-0.1.schema.json")
         outcome = self.load("outcome-snapshot-0.1.schema.json")
+        history = self.load("history-snapshot-0.1.schema.json")
         self.assertEqual(alternative["properties"]["schema"]["const"], SNAPSHOT_SCHEMA)
         self.assertEqual(conflict["properties"]["schema"]["const"], CONFLICT_SNAPSHOT_SCHEMA)
         self.assertEqual(unresolved["properties"]["schema"]["const"], UNRESOLVED_SNAPSHOT_SCHEMA)
         self.assertEqual(need["properties"]["schema"]["const"], NEED_SNAPSHOT_SCHEMA)
         self.assertEqual(residual["properties"]["schema"]["const"], RESIDUAL_SNAPSHOT_SCHEMA)
         self.assertEqual(outcome["properties"]["schema"]["const"], OUTCOME_SNAPSHOT_SCHEMA)
-        for schema in (alternative, conflict, unresolved, need, residual, outcome):
+        self.assertEqual(history["properties"]["schema"]["const"], HISTORY_SNAPSHOT_SCHEMA)
+        for schema in (alternative, conflict, unresolved, need, residual, outcome, history):
             self.assertFalse(schema["additionalProperties"])
 
         self.assertGreaterEqual(alternative["properties"]["required_constraints"]["minItems"], 1)
@@ -101,6 +105,13 @@ class PortableContractTests(unittest.TestCase):
         observation = outcome["$defs"]["criterion_observation"]
         self.assertEqual(observation["properties"]["satisfied"]["type"], "boolean")
         self.assertGreaterEqual(observation["properties"]["evidence"]["minItems"], 1)
+
+        self.assertEqual(history["$defs"]["history_scope"]["properties"]["complete_for_domain"]["type"], "boolean")
+        self.assertGreaterEqual(history["$defs"]["evidence_refs"]["minItems"], 1)
+        self.assertEqual(history["$defs"]["historical_pattern"]["properties"]["position"]["minimum"], 0)
+        self.assertNotIn("minItems", history["properties"]["history"])
+        self.assertIn("signature", history["$defs"]["current_pattern"]["required"])
+        self.assertIn("signature", history["$defs"]["historical_pattern"]["required"])
 
     def test_statetalk_schema_kind_vocabulary_matches_floorvoice_exactly(self):
         schema = self.load("statetalk-packet-0.1.schema.json")
