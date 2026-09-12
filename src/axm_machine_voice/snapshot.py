@@ -3,11 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+from .conflict import AssertionState, produce_exact_conflict
 from .core import GateContext, GateDecision, Ref, StateTalkPacket, emit, evaluate, packet_dict
 from .producer import OptionState, produce_lower_cost_alternative
 
 
-SNAPSHOT_SCHEMA = "axm-machine-voice/alternative-snapshot/0.1"
+ALTERNATIVE_SNAPSHOT_SCHEMA = "axm-machine-voice/alternative-snapshot/0.1"
+CONFLICT_SNAPSHOT_SCHEMA = "axm-machine-voice/conflict-snapshot/0.1"
+# Backwards-compatible name used by the original alternative-snapshot API/tests.
+SNAPSHOT_SCHEMA = ALTERNATIVE_SNAPSHOT_SCHEMA
 
 
 @dataclass(frozen=True)
@@ -69,10 +73,45 @@ def _option(value: Any, path: str) -> OptionState:
     )
 
 
+def _assertion(value: Any, path: str) -> AssertionState:
+    obj = _mapping(value, path)
+    _exact_keys(obj, {"ref", "scope", "subject", "property", "value", "evidence"}, path)
+    return AssertionState(
+        ref=_ref(obj["ref"], f"{path}.ref"),
+        scope=_ref(obj["scope"], f"{path}.scope"),
+        subject=_ref(obj["subject"], f"{path}.subject"),
+        property=_ref(obj["property"], f"{path}.property"),
+        value=obj["value"],
+        evidence=_refs(obj["evidence"], f"{path}.evidence"),
+    )
+
+
 def _operations(value: Any, path: str) -> tuple[str, ...]:
     if not isinstance(value, list):
         raise ValueError(f"{path} must be an array")
     return tuple(_text(item, f"{path}[{index}]") for index, item in enumerate(value))
+
+
+def _require_active_refs(active_refs: tuple[Ref, ...]) -> None:
+    if not active_refs:
+        raise ValueError("active_refs must contain at least one independently supplied reference")
+
+
+def _gate_candidate(
+    candidate,
+    *,
+    active_refs: tuple[Ref, ...],
+    seen_fingerprints: frozenset[str],
+) -> SnapshotOutcome:
+    decision = evaluate(
+        candidate,
+        GateContext(active_refs=active_refs, seen_fingerprints=seen_fingerprints),
+    )
+    if not decision.eligible:
+        return SnapshotOutcome(status="rejected", reasons=decision.reasons, decision=decision)
+
+    packet = emit(candidate, decision)
+    return SnapshotOutcome(status="emitted", reasons=(), decision=decision, packet=packet)
 
 
 def process_alternative_snapshot(
@@ -81,21 +120,9 @@ def process_alternative_snapshot(
     active_refs: tuple[Ref, ...],
     seen_fingerprints: frozenset[str] = frozenset(),
 ) -> SnapshotOutcome:
-    """Validate one versioned snapshot and run it through producer + communication gate.
+    """Validate one alternative snapshot and run it through producer + gate."""
 
-    `snapshot.activity` is the producer's declared relevance. `active_refs` is supplied
-    independently by the surrounding runtime and is what the communication gate treats
-    as actually active. Keeping those inputs separate prevents a snapshot from certifying
-    its own relevance.
-
-    The adapter fails closed on unknown fields. A future producer-specific concept must
-    receive a schema revision rather than being silently ignored by an older adapter.
-    `no_candidate` is a normal outcome: silence is not treated as an error.
-    """
-
-    if not active_refs:
-        raise ValueError("active_refs must contain at least one independently supplied reference")
-
+    _require_active_refs(active_refs)
     obj = _mapping(snapshot, "snapshot")
     expected = {
         "schema",
@@ -111,7 +138,7 @@ def process_alternative_snapshot(
     _exact_keys(obj, expected, "snapshot")
 
     schema = _text(obj["schema"], "snapshot.schema")
-    if schema != SNAPSHOT_SCHEMA:
+    if schema != ALTERNATIVE_SNAPSHOT_SCHEMA:
         raise ValueError(f"Unsupported snapshot schema: {schema}")
 
     alternatives_raw = obj["alternatives"]
@@ -139,16 +166,94 @@ def process_alternative_snapshot(
             status="no_candidate",
             reasons=("no_lower_cost_constraint_preserving_alternative",),
         )
-
-    decision = evaluate(
+    return _gate_candidate(
         candidate,
-        GateContext(active_refs=active_refs, seen_fingerprints=seen_fingerprints),
+        active_refs=active_refs,
+        seen_fingerprints=seen_fingerprints,
     )
-    if not decision.eligible:
-        return SnapshotOutcome(status="rejected", reasons=decision.reasons, decision=decision)
 
-    packet = emit(candidate, decision)
-    return SnapshotOutcome(status="emitted", reasons=(), decision=decision, packet=packet)
+
+def process_conflict_snapshot(
+    snapshot: Mapping[str, Any],
+    *,
+    active_refs: tuple[Ref, ...],
+    seen_fingerprints: frozenset[str] = frozenset(),
+) -> SnapshotOutcome:
+    """Validate one exact-conflict snapshot and run it through producer + gate.
+
+    The snapshot declares what activity the conflict relates to, but `active_refs` still
+    comes independently from the surrounding runtime. The adapter does not let a conflict
+    snapshot certify its own relevance.
+    """
+
+    _require_active_refs(active_refs)
+    obj = _mapping(snapshot, "snapshot")
+    expected = {
+        "schema",
+        "event_id",
+        "source",
+        "activity",
+        "assertions",
+        "next_operations",
+    }
+    _exact_keys(obj, expected, "snapshot")
+
+    schema = _text(obj["schema"], "snapshot.schema")
+    if schema != CONFLICT_SNAPSHOT_SCHEMA:
+        raise ValueError(f"Unsupported snapshot schema: {schema}")
+
+    assertions_raw = obj["assertions"]
+    if not isinstance(assertions_raw, list):
+        raise ValueError("snapshot.assertions must be an array")
+
+    source = _ref(obj["source"], "snapshot.source")
+    declared_activity = _ref(obj["activity"], "snapshot.activity")
+    candidate = produce_exact_conflict(
+        event_id=_text(obj["event_id"], "snapshot.event_id"),
+        source=source,
+        activity=declared_activity,
+        assertions=tuple(
+            _assertion(item, f"snapshot.assertions[{index}]")
+            for index, item in enumerate(assertions_raw)
+        ),
+        next_operations=_operations(obj["next_operations"], "snapshot.next_operations"),
+    )
+
+    if candidate is None:
+        return SnapshotOutcome(
+            status="no_candidate",
+            reasons=("no_exact_same_scope_conflict",),
+        )
+    return _gate_candidate(
+        candidate,
+        active_refs=active_refs,
+        seen_fingerprints=seen_fingerprints,
+    )
+
+
+def process_snapshot(
+    snapshot: Mapping[str, Any],
+    *,
+    active_refs: tuple[Ref, ...],
+    seen_fingerprints: frozenset[str] = frozenset(),
+) -> SnapshotOutcome:
+    """Route one explicit versioned snapshot to its exact deterministic adapter."""
+
+    obj = _mapping(snapshot, "snapshot")
+    schema = _text(obj.get("schema"), "snapshot.schema")
+    if schema == ALTERNATIVE_SNAPSHOT_SCHEMA:
+        return process_alternative_snapshot(
+            obj,
+            active_refs=active_refs,
+            seen_fingerprints=seen_fingerprints,
+        )
+    if schema == CONFLICT_SNAPSHOT_SCHEMA:
+        return process_conflict_snapshot(
+            obj,
+            active_refs=active_refs,
+            seen_fingerprints=seen_fingerprints,
+        )
+    raise ValueError(f"Unsupported snapshot schema: {schema}")
 
 
 def outcome_dict(outcome: SnapshotOutcome) -> dict[str, Any]:
