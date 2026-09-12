@@ -6,10 +6,12 @@ from typing import Any, Mapping
 from .conflict import AssertionState, produce_exact_conflict
 from .core import GateContext, GateDecision, Ref, StateTalkPacket, emit, evaluate, packet_dict
 from .producer import OptionState, produce_lower_cost_alternative
+from .unresolved import AttemptState, produce_bounded_unresolved
 
 
 ALTERNATIVE_SNAPSHOT_SCHEMA = "axm-machine-voice/alternative-snapshot/0.1"
 CONFLICT_SNAPSHOT_SCHEMA = "axm-machine-voice/conflict-snapshot/0.1"
+UNRESOLVED_SNAPSHOT_SCHEMA = "axm-machine-voice/unresolved-snapshot/0.1"
 # Backwards-compatible name used by the original alternative-snapshot API/tests.
 SNAPSHOT_SCHEMA = ALTERNATIVE_SNAPSHOT_SCHEMA
 
@@ -82,6 +84,16 @@ def _assertion(value: Any, path: str) -> AssertionState:
         subject=_ref(obj["subject"], f"{path}.subject"),
         property=_ref(obj["property"], f"{path}.property"),
         value=obj["value"],
+        evidence=_refs(obj["evidence"], f"{path}.evidence"),
+    )
+
+
+def _attempt(value: Any, path: str) -> AttemptState:
+    obj = _mapping(value, path)
+    _exact_keys(obj, {"ref", "preserves", "evidence"}, path)
+    return AttemptState(
+        ref=_ref(obj["ref"], f"{path}.ref"),
+        preserves=_refs(obj["preserves"], f"{path}.preserves"),
         evidence=_refs(obj["evidence"], f"{path}.evidence"),
     )
 
@@ -179,12 +191,7 @@ def process_conflict_snapshot(
     active_refs: tuple[Ref, ...],
     seen_fingerprints: frozenset[str] = frozenset(),
 ) -> SnapshotOutcome:
-    """Validate one exact-conflict snapshot and run it through producer + gate.
-
-    The snapshot declares what activity the conflict relates to, but `active_refs` still
-    comes independently from the surrounding runtime. The adapter does not let a conflict
-    snapshot certify its own relevance.
-    """
+    """Validate one exact-conflict snapshot and run it through producer + gate."""
 
     _require_active_refs(active_refs)
     obj = _mapping(snapshot, "snapshot")
@@ -231,6 +238,69 @@ def process_conflict_snapshot(
     )
 
 
+def process_unresolved_snapshot(
+    snapshot: Mapping[str, Any],
+    *,
+    active_refs: tuple[Ref, ...],
+    seen_fingerprints: frozenset[str] = frozenset(),
+) -> SnapshotOutcome:
+    """Validate one bounded-unresolved snapshot and run it through producer + gate.
+
+    As with every Machine Voice snapshot, the declared activity is not allowed to certify
+    its own relevance. The runtime supplies `active_refs` independently.
+    """
+
+    _require_active_refs(active_refs)
+    obj = _mapping(snapshot, "snapshot")
+    expected = {
+        "schema",
+        "event_id",
+        "source",
+        "activity",
+        "problem",
+        "search_scope",
+        "required_constraints",
+        "attempts",
+        "next_operations",
+    }
+    _exact_keys(obj, expected, "snapshot")
+
+    schema = _text(obj["schema"], "snapshot.schema")
+    if schema != UNRESOLVED_SNAPSHOT_SCHEMA:
+        raise ValueError(f"Unsupported snapshot schema: {schema}")
+
+    attempts_raw = obj["attempts"]
+    if not isinstance(attempts_raw, list):
+        raise ValueError("snapshot.attempts must be an array")
+
+    source = _ref(obj["source"], "snapshot.source")
+    declared_activity = _ref(obj["activity"], "snapshot.activity")
+    candidate = produce_bounded_unresolved(
+        event_id=_text(obj["event_id"], "snapshot.event_id"),
+        source=source,
+        activity=declared_activity,
+        problem=_ref(obj["problem"], "snapshot.problem"),
+        search_scope=_ref(obj["search_scope"], "snapshot.search_scope"),
+        required_constraints=_refs(obj["required_constraints"], "snapshot.required_constraints"),
+        attempts=tuple(
+            _attempt(item, f"snapshot.attempts[{index}]")
+            for index, item in enumerate(attempts_raw)
+        ),
+        next_operations=_operations(obj["next_operations"], "snapshot.next_operations"),
+    )
+
+    if candidate is None:
+        return SnapshotOutcome(
+            status="no_candidate",
+            reasons=("bounded_search_not_unresolved",),
+        )
+    return _gate_candidate(
+        candidate,
+        active_refs=active_refs,
+        seen_fingerprints=seen_fingerprints,
+    )
+
+
 def process_snapshot(
     snapshot: Mapping[str, Any],
     *,
@@ -249,6 +319,12 @@ def process_snapshot(
         )
     if schema == CONFLICT_SNAPSHOT_SCHEMA:
         return process_conflict_snapshot(
+            obj,
+            active_refs=active_refs,
+            seen_fingerprints=seen_fingerprints,
+        )
+    if schema == UNRESOLVED_SNAPSHOT_SCHEMA:
+        return process_unresolved_snapshot(
             obj,
             active_refs=active_refs,
             seen_fingerprints=seen_fingerprints,
