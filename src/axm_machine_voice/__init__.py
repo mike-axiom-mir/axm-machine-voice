@@ -19,6 +19,7 @@ from .core import (
     render_floorvoice,
     semantic_fingerprint,
 )
+from .history import CurrentPattern, HistoricalPattern, HistoryScope, produce_history_classification
 from .journal import (
     JOURNAL_PROTOCOL,
     append_emission,
@@ -61,9 +62,12 @@ __all__ = [
     "Claim",
     "CommunicationKind",
     "CriterionObservation",
+    "CurrentPattern",
     "FLOORVOICE",
     "GateContext",
     "GateDecision",
+    "HistoricalPattern",
+    "HistoryScope",
     "JOURNAL_PROTOCOL",
     "JsonlEventLog",
     "NEED_SNAPSHOT_SCHEMA",
@@ -99,6 +103,7 @@ __all__ = [
     "produce_bounded_unresolved",
     "produce_criterion_outcome",
     "produce_exact_conflict",
+    "produce_history_classification",
     "produce_lower_cost_alternative",
     "produce_residual_look",
     "read_journal",

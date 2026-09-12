@@ -70,6 +70,14 @@
       "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
     },
     {
+      "id": "producer.history-repeat-novel",
+      "description": "Deterministic paired history producer compares one grounded current portable pattern against one explicit same-domain prior-history scope. An exact grounded prior match can surface recurrence without complete history; bounded novelty requires no exact match plus an explicit complete-for-domain history claim. It does not authenticate historical ordering or completeness and does not claim global or scientific novelty.",
+      "provides": ["state.repeat", "state.novel", "communication.candidate"],
+      "accepts": ["state.pattern", "state.history", "history.scope", "history.completeness", "state.context", "evidence"],
+      "tags": ["producer", "state", "deterministic", "history", "repeat", "novelty", "continuity", "evidence"],
+      "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
+    },
+    {
       "id": "interface.floorvoice",
       "description": "Offline local FloorVoice renders a fixed tiny vocabulary from StateTalk kind and supports bounded Inspect, Compare, and Acknowledge response intents without inventing actor identity.",
       "provides": ["interface.local", "interface.floorvoice", "communication.response.intent"],
@@ -133,6 +141,8 @@
       "model invalidity or observation invalidity merely because a residual exceeds tolerance",
       "global success or global failure from evaluation against one explicit criteria contract",
       "authenticity, authorship, or pre-attempt timing of a supplied success criteria contract",
+      "global or scientific novelty from absence in one supplied history scope",
+      "authenticated completeness or chronological ordering of a supplied history scope",
       "cross-module interoperability before exact composition testing",
       "actor authentication by the local FloorVoice renderer",
       "cryptographic authenticity of the local unkeyed journal"
