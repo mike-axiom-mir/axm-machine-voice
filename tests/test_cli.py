@@ -9,6 +9,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from axm_machine_voice import read_journal  # noqa: E402
 from axm_machine_voice.cli import MACHINE_CHANNEL_PROTOCOL, main  # noqa: E402
 
 
@@ -180,6 +181,123 @@ class MachineCliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertEqual(result["status"], "invalid")
         self.assertIn("source", result["error"])
+
+    def test_journal_automatically_suppresses_repeat_communication(self):
+        with TemporaryDirectory() as tmp:
+            journal = Path(tmp) / "communication.jsonl"
+            args = [
+                "snapshot",
+                str(self.example),
+                "--active-ref",
+                self.active,
+                "--journal",
+                str(journal),
+            ]
+            first_code, first = self.run_cli(args)
+            second_code, second = self.run_cli(args)
+
+            self.assertEqual(first_code, 0)
+            self.assertEqual(first["status"], "emitted")
+            self.assertEqual(second_code, 0)
+            self.assertEqual(second["status"], "rejected")
+            self.assertIn("duplicate_semantic_event", second["reasons"])
+            records = read_journal(journal)
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["type"], "emission")
+
+    def test_no_candidate_does_not_become_speech_history(self):
+        data = json.loads(self.example.read_text(encoding="utf-8"))
+        for alternative in data["alternatives"]:
+            alternative["cost"] = 99
+
+        with TemporaryDirectory() as tmp:
+            snapshot = Path(tmp) / "silent.json"
+            journal = Path(tmp) / "communication.jsonl"
+            snapshot.write_text(json.dumps(data), encoding="utf-8")
+            code, result = self.run_cli([
+                "snapshot",
+                str(snapshot),
+                "--active-ref",
+                self.active,
+                "--journal",
+                str(journal),
+            ])
+            self.assertEqual(code, 0)
+            self.assertEqual(result["status"], "no_candidate")
+            self.assertFalse(journal.exists())
+
+    def test_respond_command_records_interaction_with_emitted_event(self):
+        with TemporaryDirectory() as tmp:
+            journal = Path(tmp) / "communication.jsonl"
+            _, emitted = self.run_cli([
+                "snapshot",
+                str(self.example),
+                "--active-ref",
+                self.active,
+                "--journal",
+                str(journal),
+            ])
+            code, result = self.run_cli([
+                "respond",
+                str(journal),
+                "--event-id",
+                emitted["packet"]["event_id"],
+                "--actor",
+                "human:local-user",
+                "--action",
+                "inspect",
+                "--target",
+                "state:candidate-path-b",
+            ])
+            self.assertEqual(code, 0)
+            self.assertEqual(result["status"], "recorded")
+            self.assertEqual(result["journal_record"]["type"], "response")
+            records = read_journal(journal)
+            self.assertEqual(len(records), 2)
+            self.assertEqual(records[1]["action"], "inspect")
+            self.assertEqual(records[1]["event_id"], emitted["packet"]["event_id"])
+
+    def test_respond_unknown_event_is_invalid_and_does_not_append(self):
+        with TemporaryDirectory() as tmp:
+            journal = Path(tmp) / "communication.jsonl"
+            _, _ = self.run_cli([
+                "snapshot",
+                str(self.example),
+                "--active-ref",
+                self.active,
+                "--journal",
+                str(journal),
+            ])
+            code, result = self.run_cli([
+                "respond",
+                str(journal),
+                "--event-id",
+                "not-real",
+                "--actor",
+                "human:local-user",
+                "--action",
+                "inspect",
+            ])
+            self.assertEqual(code, 2)
+            self.assertEqual(result["status"], "invalid")
+            self.assertIn("does not reference", result["error"])
+            self.assertEqual(len(read_journal(journal)), 1)
+
+    def test_corrupt_journal_fails_closed_before_new_communication(self):
+        with TemporaryDirectory() as tmp:
+            journal = Path(tmp) / "communication.jsonl"
+            journal.write_text('{"broken":true}\n', encoding="utf-8")
+            code, result = self.run_cli([
+                "snapshot",
+                str(self.example),
+                "--active-ref",
+                self.active,
+                "--journal",
+                str(journal),
+            ])
+            self.assertEqual(code, 2)
+            self.assertEqual(result["status"], "invalid")
+            self.assertIn("unsupported type", result["error"])
 
 
 if __name__ == "__main__":

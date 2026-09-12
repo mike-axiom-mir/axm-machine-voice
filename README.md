@@ -57,7 +57,7 @@ The first working slice is deliberately small and standard-library-only:
 - semantic duplicate detection;
 - canonical StateTalk packets;
 - a fixed ten-phrase FloorVoice layer;
-- append-only JSONL event logging;
+- append-only communication history;
 - tests for truth-boundary failures.
 
 The implementation lives in [`src/axm_machine_voice`](src/axm_machine_voice), and the protocol is documented in [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
@@ -184,11 +184,43 @@ axm-machine-voice/machine-channel/0.1
 
 The snapshot may also arrive over stdin, and repeated `--seen-fingerprint` values let the normal communication gate suppress already-emitted semantics.
 
-Valid protocol outcomes (`emitted`, `no_candidate`, `rejected`) use exit code `0`. Invalid input uses exit code `2` but still returns the same versioned JSON envelope. Even normal command-syntax failures are converted to machine-readable `invalid` output rather than human argparse prose.
+Valid snapshot outcomes (`emitted`, `no_candidate`, `rejected`) use exit code `0`. Structured journal responses return `recorded`. Invalid input uses exit code `2` but still returns the same versioned JSON envelope. Even normal command-syntax failures are converted to machine-readable `invalid` output rather than human argparse prose.
 
 This channel adds no reasoning and no new authority. It transports the same strict snapshot → producer → gate result used by the local human surface.
 
 See [`docs/MACHINE_CHANNEL.md`](docs/MACHINE_CHANNEL.md) for the contract.
+
+## Communication journal v0.1
+
+Machine Voice can preserve only the communications that actually passed the gate in a local append-only journal:
+
+```bash
+python machine_voice.py snapshot examples/alternative_snapshot.example.json \
+  --active-ref activity:local-monolith-proof \
+  --journal local/communication.jsonl
+```
+
+Run the same state again with the same journal and the previous semantic fingerprint is automatically inherited. The repeat is rejected as `duplicate_semantic_event`, so the Floor does not keep lighting the same message.
+
+The journal is **not telemetry**. `no_candidate`, rejected candidates, and invalid input do not become speech history.
+
+A human, AI, game, or machine can attach a structured response only to an event that really emitted:
+
+```bash
+python machine_voice.py respond local/communication.jsonl \
+  --event-id snapshot-example-001 \
+  --actor human:local-user \
+  --action inspect \
+  --target state:candidate-path-b
+```
+
+Journal records are hash-linked. The chain catches accidental/un-rehashed edits and ordering damage, but it is **not** cryptographic proof against a writer who can rewrite the file and recompute hashes, and it cannot prove an intact tail was never deleted. Stronger claims require an external checkpoint/signature layer.
+
+Response actor references are structured claims supplied by the caller; v0.1 does not authenticate them.
+
+v0.1 assumes one journal writer at a time.
+
+See [`docs/COMMUNICATION_JOURNAL.md`](docs/COMMUNICATION_JOURNAL.md) for the full contract.
 
 ## FloorVoice v0.1
 
@@ -226,6 +258,9 @@ No proposal becomes canon because it was surfaced.
 - execute arbitrary proposal contents;
 - verify the external provenance of a snapshot merely because its schema is valid;
 - let a snapshot certify its own relevance to the current runtime state;
+- authenticate a journal response actor;
+- prove the local journal was never maliciously rewritten/re-hashed;
+- prove an intact journal tail was never deleted;
 - claim the bundled local demo or synthetic producer example is a live discovery.
 
 Those boundaries are intentional. Richer state capabilities can be connected later without changing the truth boundary.
@@ -240,9 +275,9 @@ real state snapshot + independent active context
 strict adapter
         ↓
 producer -> Candidate -> communication gate -> StateTalk packet
-        |                                      |
-        v                                      v
-machine JSON channel                    local human renderer
+        |                    |                 |
+        v                    v                 v
+communication journal   machine JSON      local human renderer
 ```
 
 The local page must continue to distinguish demo/example material from packets whose provenance points to a live producer. A small real signal with inspectable evidence is preferable to an impressive fake one.
