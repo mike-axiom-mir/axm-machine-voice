@@ -3,6 +3,7 @@
 Without `--snapshot`, the packet comes from the synthetic deterministic example.
 With `--snapshot`, the supplied versioned state snapshot is validated, processed by the
 real producer and communication gate, then embedded only when it actually emits.
+Snapshot relevance is checked against independently supplied `--active-ref` values.
 """
 
 from html import escape
@@ -18,6 +19,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(EXAMPLES))
 
 from axm_machine_voice import (  # noqa: E402
+    Ref,
     outcome_dict,
     packet_dict,
     process_alternative_snapshot,
@@ -28,11 +30,18 @@ from run_deterministic_producer import build_packet  # noqa: E402
 BRIDGE_PROTOCOL = "axm-machine-voice/local-bridge/0.1"
 
 
-def load_snapshot_outcome(path: Path):
+def parse_ref_key(value: str) -> Ref:
+    kind, separator, identifier = value.partition(":")
+    if not separator or not kind.strip() or not identifier.strip():
+        raise argparse.ArgumentTypeError("reference must use non-empty kind:id form")
+    return Ref(kind, identifier)
+
+
+def load_snapshot_outcome(path: Path, *, active_refs: tuple[Ref, ...]):
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, Mapping):
         raise ValueError("Snapshot file must contain a JSON object")
-    return process_alternative_snapshot(data)
+    return process_alternative_snapshot(data, active_refs=active_refs)
 
 
 def build_html(
@@ -110,6 +119,13 @@ def main() -> None:
         help="Optional versioned Machine Voice state snapshot JSON. No page is generated if it produces silence/rejection.",
     )
     parser.add_argument(
+        "--active-ref",
+        action="append",
+        type=parse_ref_key,
+        default=[],
+        help="Independently supplied active runtime reference in kind:id form. Required at least once with --snapshot.",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=ROOT / "local" / "monolith_proof.generated.html",
@@ -120,7 +136,9 @@ def main() -> None:
     packet = None
     source_label = "synthetic state"
     if args.snapshot is not None:
-        outcome = load_snapshot_outcome(args.snapshot)
+        if not args.active_ref:
+            parser.error("--snapshot requires at least one independent --active-ref")
+        outcome = load_snapshot_outcome(args.snapshot, active_refs=tuple(args.active_ref))
         if outcome.packet is None:
             print(json.dumps(outcome_dict(outcome), indent=2, ensure_ascii=False))
             return
