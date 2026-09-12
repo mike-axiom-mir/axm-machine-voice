@@ -1,3 +1,4 @@
+from .conflict import AssertionState, produce_exact_conflict
 from .core import (
     Candidate,
     Claim,
@@ -30,6 +31,7 @@ from .producer import OptionState, produce_lower_cost_alternative
 from .snapshot import SNAPSHOT_SCHEMA, SnapshotOutcome, outcome_dict, process_alternative_snapshot
 
 __all__ = [
+    "AssertionState",
     "Candidate",
     "Claim",
     "CommunicationKind",
@@ -56,6 +58,7 @@ __all__ = [
     "outcome_dict",
     "packet_dict",
     "process_alternative_snapshot",
+    "produce_exact_conflict",
     "produce_lower_cost_alternative",
     "read_journal",
     "render_floorvoice",
