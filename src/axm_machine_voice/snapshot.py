@@ -139,7 +139,7 @@ def process_alternative_snapshot(
 
     schema = _text(obj["schema"], "snapshot.schema")
     if schema != ALTERNATIVE_SNAPSHOT_SCHEMA:
-        raise ValueError(f"Unsupported alternative snapshot schema: {schema}")
+        raise ValueError(f"Unsupported snapshot schema: {schema}")
 
     alternatives_raw = obj["alternatives"]
     if not isinstance(alternatives_raw, list):
@@ -200,7 +200,7 @@ def process_conflict_snapshot(
 
     schema = _text(obj["schema"], "snapshot.schema")
     if schema != CONFLICT_SNAPSHOT_SCHEMA:
-        raise ValueError(f"Unsupported conflict snapshot schema: {schema}")
+        raise ValueError(f"Unsupported snapshot schema: {schema}")
 
     assertions_raw = obj["assertions"]
     if not isinstance(assertions_raw, list):
