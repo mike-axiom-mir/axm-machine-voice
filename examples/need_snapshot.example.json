@@ -1,0 +1,53 @@
+{
+  "schema": "axm-machine-voice/need-snapshot/0.1",
+  "event_id": "need-snapshot-example-001",
+  "source": {
+    "kind": "machine-floor",
+    "id": "need-snapshot-example"
+  },
+  "activity": {
+    "kind": "activity",
+    "id": "local-monolith-proof"
+  },
+  "task": {
+    "kind": "task",
+    "id": "build-proof"
+  },
+  "inventory_scope": {
+    "kind": "inventory-scope",
+    "id": "synthetic-run-01"
+  },
+  "required_inputs": [
+    {
+      "kind": "input",
+      "id": "config"
+    },
+    {
+      "kind": "input",
+      "id": "state-snapshot"
+    }
+  ],
+  "available_inputs": [
+    {
+      "ref": {
+        "kind": "input",
+        "id": "config"
+      },
+      "evidence": [
+        {
+          "kind": "evidence",
+          "id": "config-present"
+        }
+      ]
+    }
+  ],
+  "inventory_evidence": [
+    {
+      "kind": "evidence",
+      "id": "inventory-scan"
+    }
+  ],
+  "next_operations": [
+    "inspect"
+  ]
+}
