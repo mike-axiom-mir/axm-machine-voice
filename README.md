@@ -77,7 +77,7 @@ python examples/run_notice_producer.py
 
 See [`docs/NOTICE_PRODUCER.md`](docs/NOTICE_PRODUCER.md).
 
-The notice producer is intentionally Python/API-only in this lane. A strict notice snapshot schema should be added only after this producer independently survives review and CI.
+Grounded notice now also uses the strict shared snapshot transport. `axm-machine-voice/notice-snapshot/0.1` carries only the explicit detector signal and evidence; it cannot add importance, anomaly, novelty, cause, success, failure, recommendation, or free-form interpretation.
 
 ### `There is another way.`
 
@@ -242,13 +242,13 @@ python examples/run_history_producer.py
 
 See [`docs/HISTORY_PRODUCER.md`](docs/HISTORY_PRODUCER.md).
 
-Both history states now also use the strict shared snapshot transport. The same `history-snapshot/0.1` schema carries current pattern, bounded history scope, historical entries, and evidence; transport cannot authenticate completeness or chronological ordering.
+Both history states also use the strict shared snapshot transport. The same `history-snapshot/0.1` schema carries current pattern, bounded history scope, historical entries, and evidence; transport cannot authenticate completeness or chronological ordering.
 
 All bundled producer examples use synthetic state and are not live Machine Floor discoveries.
 
 ## Versioned state snapshot handoff
 
-Seven of the eight deterministic producers currently use one strict schema-id-routed snapshot transport. Grounded notice is deliberately producer-only until its independent review passes.
+All eight deterministic producers use one strict schema-id-routed snapshot transport:
 
 ```text
 axm-machine-voice/alternative-snapshot/0.1
@@ -258,6 +258,7 @@ axm-machine-voice/need-snapshot/0.1
 axm-machine-voice/residual-snapshot/0.1
 axm-machine-voice/outcome-snapshot/0.1
 axm-machine-voice/history-snapshot/0.1
+axm-machine-voice/notice-snapshot/0.1
 ```
 
 Examples:
@@ -272,13 +273,14 @@ examples/outcome_snapshot.example.json
 examples/outcome_failure_snapshot.example.json
 examples/history_snapshot.example.json
 examples/history_novel_snapshot.example.json
+examples/notice_snapshot.example.json
 ```
 
 The caller supplies active runtime context separately. A snapshot cannot certify its own relevance.
 
 Unknown schema ids or unknown fields fail closed rather than being guessed or silently dropped.
 
-History support is additive: the package/CLI use a thin history-aware wrapper, while the prior six schemas still delegate unchanged to the earlier proven router.
+History and notice support are additive: the package/CLI use a thin wrapper for those two schemas, while the original six schemas still delegate unchanged to the earlier proven router.
 
 See [`docs/STATE_SNAPSHOT.md`](docs/STATE_SNAPSHOT.md) and the portable schemas under [`schemas/`](schemas/).
 
@@ -287,7 +289,7 @@ See [`docs/STATE_SNAPSHOT.md`](docs/STATE_SNAPSHOT.md) and the portable schemas 
 One zero-install command accepts every supported snapshot schema:
 
 ```bash
-python machine_voice.py snapshot examples/history_snapshot.example.json \
+python machine_voice.py snapshot examples/notice_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 

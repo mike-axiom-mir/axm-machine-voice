@@ -13,6 +13,7 @@ from axm_machine_voice import (  # noqa: E402
     HISTORY_SNAPSHOT_SCHEMA,
     JOURNAL_PROTOCOL,
     NEED_SNAPSHOT_SCHEMA,
+    NOTICE_SNAPSHOT_SCHEMA,
     OUTCOME_SNAPSHOT_SCHEMA,
     RESIDUAL_SNAPSHOT_SCHEMA,
     SNAPSHOT_SCHEMA,
@@ -48,6 +49,7 @@ class PortableContractTests(unittest.TestCase):
             "residual-snapshot-0.1.schema.json",
             "outcome-snapshot-0.1.schema.json",
             "history-snapshot-0.1.schema.json",
+            "notice-snapshot-0.1.schema.json",
             "local-bridge-0.1.schema.json",
             "machine-channel-0.1.schema.json",
             "communication-journal-0.1.schema.json",
@@ -67,6 +69,7 @@ class PortableContractTests(unittest.TestCase):
         residual = self.load("residual-snapshot-0.1.schema.json")
         outcome = self.load("outcome-snapshot-0.1.schema.json")
         history = self.load("history-snapshot-0.1.schema.json")
+        notice = self.load("notice-snapshot-0.1.schema.json")
         self.assertEqual(alternative["properties"]["schema"]["const"], SNAPSHOT_SCHEMA)
         self.assertEqual(conflict["properties"]["schema"]["const"], CONFLICT_SNAPSHOT_SCHEMA)
         self.assertEqual(unresolved["properties"]["schema"]["const"], UNRESOLVED_SNAPSHOT_SCHEMA)
@@ -74,7 +77,8 @@ class PortableContractTests(unittest.TestCase):
         self.assertEqual(residual["properties"]["schema"]["const"], RESIDUAL_SNAPSHOT_SCHEMA)
         self.assertEqual(outcome["properties"]["schema"]["const"], OUTCOME_SNAPSHOT_SCHEMA)
         self.assertEqual(history["properties"]["schema"]["const"], HISTORY_SNAPSHOT_SCHEMA)
-        for schema in (alternative, conflict, unresolved, need, residual, outcome, history):
+        self.assertEqual(notice["properties"]["schema"]["const"], NOTICE_SNAPSHOT_SCHEMA)
+        for schema in (alternative, conflict, unresolved, need, residual, outcome, history, notice):
             self.assertFalse(schema["additionalProperties"])
 
         self.assertGreaterEqual(alternative["properties"]["required_constraints"]["minItems"], 1)
@@ -112,6 +116,12 @@ class PortableContractTests(unittest.TestCase):
         self.assertNotIn("minItems", history["properties"]["history"])
         self.assertIn("signature", history["$defs"]["current_pattern"]["required"])
         self.assertIn("signature", history["$defs"]["historical_pattern"]["required"])
+
+        signal = notice["$defs"]["signal"]
+        self.assertEqual(signal["properties"]["triggered"]["type"], "boolean")
+        self.assertGreaterEqual(signal["properties"]["subjects"]["minItems"], 1)
+        for field in ("observation_evidence", "rule_evidence", "trigger_evidence"):
+            self.assertEqual(signal["properties"][field]["$ref"], "#/$defs/ref")
 
     def test_statetalk_schema_kind_vocabulary_matches_floorvoice_exactly(self):
         schema = self.load("statetalk-packet-0.1.schema.json")

@@ -23,7 +23,7 @@ class GroundedNoticeContractTests(unittest.TestCase):
             not_claimed,
         )
 
-    def test_docs_keep_notice_as_grounded_detector_handoff_and_producer_only_for_now(self):
+    def test_docs_keep_notice_as_grounded_detector_handoff_and_supported_snapshot(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         docs = (ROOT / "docs" / "NOTICE_PRODUCER.md").read_text(encoding="utf-8")
         combined = readme + docs
@@ -33,7 +33,12 @@ class GroundedNoticeContractTests(unittest.TestCase):
         self.assertIn('"importance_claimed": false', combined)
         self.assertIn('"anomaly_claimed": false', combined)
         self.assertIn('"interpretation_claimed": false', combined)
-        self.assertIn("notice producer is intentionally Python/API-only in this lane", readme)
+        self.assertIn("axm-machine-voice/notice-snapshot/0.1", combined)
+        self.assertIn("examples/notice_snapshot.example.json", combined)
+        notice_start = readme.index("### `I noticed something.`")
+        next_heading = readme.index("### `There is another way.`", notice_start)
+        notice_section = readme[notice_start:next_heading]
+        self.assertNotIn("Python/API-only in this lane", notice_section)
 
 
 if __name__ == "__main__":

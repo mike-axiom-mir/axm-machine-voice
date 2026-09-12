@@ -117,7 +117,7 @@ The notice packet preserves three explicit evidence references:
 
 Subject order is normalized so reordering the same subjects does not create a new semantic fingerprint.
 
-## Runnable example
+## Runnable producer example
 
 ```bash
 python examples/run_notice_producer.py
@@ -125,6 +125,42 @@ python examples/run_notice_producer.py
 
 The bundled example uses synthetic state. It is not a live Machine Floor observation.
 
-## Transport boundary
+## Strict snapshot transport
 
-This lane adds and reviews the producer first. A strict versioned notice snapshot should be added only after the producer independently passes review and CI, following the same pattern as the earlier Machine Voice capabilities.
+Protocol:
+
+```text
+axm-machine-voice/notice-snapshot/0.1
+```
+
+Complete example:
+
+```text
+examples/notice_snapshot.example.json
+```
+
+The snapshot carries only the explicit notice signal fields plus source, activity, event id, and next operations. It has no field for importance, anomaly, novelty, cause, success, failure, recommendation, or free-form interpretation. Unknown fields fail closed.
+
+Machine channel:
+
+```bash
+python machine_voice.py snapshot examples/notice_snapshot.example.json \
+  --active-ref activity:local-monolith-proof
+```
+
+Offline renderer proof:
+
+```bash
+python examples/build_local_monolith_proof.py \
+  --snapshot examples/notice_snapshot.example.json \
+  --active-ref activity:local-monolith-proof
+```
+
+The transport changes no truth boundary:
+
+```text
+triggered = false → no_candidate silence
+triggered = true  → grounded NOTICE candidate → gate
+```
+
+The snapshot cannot certify its own active relevance and cannot add interpretation absent from the producer packet.
