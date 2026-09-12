@@ -8,6 +8,7 @@ Supported schema identifiers:
 axm-machine-voice/alternative-snapshot/0.1
 axm-machine-voice/conflict-snapshot/0.1
 axm-machine-voice/unresolved-snapshot/0.1
+axm-machine-voice/need-snapshot/0.1
 ```
 
 Complete examples:
@@ -16,15 +17,10 @@ Complete examples:
 examples/alternative_snapshot.example.json
 examples/conflict_snapshot.example.json
 examples/unresolved_snapshot.example.json
+examples/need_snapshot.example.json
 ```
 
-Portable JSON Schema descriptions:
-
-```text
-schemas/alternative-snapshot-0.1.schema.json
-schemas/conflict-snapshot-0.1.schema.json
-schemas/unresolved-snapshot-0.1.schema.json
-```
+Portable JSON Schema descriptions live under `schemas/` with matching names.
 
 ## Shared handoff
 
@@ -44,9 +40,7 @@ communication gate  ← independently supplied active runtime context
 StateTalk packet or silence/rejection
 ```
 
-The router never guesses the producer from filenames or field similarity. The explicit `schema` value selects the exact adapter. Unsupported schema ids fail closed.
-
-Adapters reject unknown fields instead of silently discarding meaning.
+The router never guesses the producer from filenames or field similarity. The explicit `schema` value selects the exact adapter. Unsupported schema ids fail closed. Adapters reject unknown fields instead of silently discarding meaning.
 
 ## Declared relevance is not active context
 
@@ -65,72 +59,68 @@ A speaker cannot make itself relevant merely by claiming relevance.
 
 ## Alternative snapshot
 
-```json
-{
-  "schema": "axm-machine-voice/alternative-snapshot/0.1",
-  "event_id": "event-001",
-  "source": {"kind": "machine-floor", "id": "main"},
-  "activity": {"kind": "activity", "id": "current-work"},
-  "cost_metric": {"kind": "metric", "id": "transition-steps"},
-  "required_constraints": [],
-  "current": {},
-  "alternatives": [],
-  "next_operations": ["inspect", "compare"]
-}
-```
+The alternative snapshot names a cost metric, required constraints, a current option, alternatives, evidence, and next operations.
 
-Each option supplies a reference, numeric cost under the explicitly named metric, preserved constraints, and evidence. If no strictly lower-cost alternative preserves every required constraint, the result is normal `no_candidate` silence.
+If no strictly lower-cost alternative preserves every required constraint, the result is normal `no_candidate` silence.
 
 ## Conflict snapshot
 
-```json
-{
-  "schema": "axm-machine-voice/conflict-snapshot/0.1",
-  "event_id": "event-002",
-  "source": {"kind": "machine-floor", "id": "main"},
-  "activity": {"kind": "activity", "id": "current-work"},
-  "assertions": [],
-  "next_operations": ["inspect", "compare"]
-}
-```
+The conflict snapshot supplies grounded assertions with exact scope, subject, property, portable value, and evidence.
 
-Each assertion names an exact scope, subject and property, carries a portable value, and includes evidence. It can emit only when grounded assertions share the same exact scope/subject/property but carry different values. It does not decide which assertion is true.
-
-If no exact comparable contradiction exists, the result is normal `no_candidate` silence.
+It can emit only when assertions share the same exact scope/subject/property but carry different explicit values. It does not decide which assertion is true. No exact comparable contradiction means normal `no_candidate` silence.
 
 ## Bounded unresolved snapshot
 
-```json
-{
-  "schema": "axm-machine-voice/unresolved-snapshot/0.1",
-  "event_id": "event-003",
-  "source": {"kind": "machine-floor", "id": "main"},
-  "activity": {"kind": "activity", "id": "current-work"},
-  "problem": {"kind": "problem", "id": "candidate-route"},
-  "search_scope": {"kind": "search-scope", "id": "run-01"},
-  "required_constraints": [],
-  "attempts": [],
-  "next_operations": ["inspect", "compare"]
-}
-```
+The unresolved snapshot names a problem, bounded search scope, required constraints, grounded attempts, and evidence.
 
-Each attempt supplies a reference, the required constraints it explicitly preserves, and evidence.
+It can emit only when at least one grounded attempt exists and every supplied attempt misses at least one required constraint. Zero attempts or any fully resolving attempt means normal `no_candidate` silence.
 
-The bounded-unresolved producer can emit only when:
-
-- at least one grounded attempt is supplied;
-- required constraints are explicit;
-- every supplied attempt misses at least one required constraint.
-
-Zero attempts is normal `no_candidate` silence. If any attempt preserves all required constraints, that is also normal `no_candidate` silence.
-
-A surfaced unresolved packet explicitly preserves the boundary:
+A surfaced packet keeps:
 
 ```json
 {"global_impossibility_claimed": false}
 ```
 
-So `I cannot resolve this.` means only that the named supplied search did not contain a fully constraint-preserving resolution. It never means no solution exists globally.
+## Bounded need snapshot
+
+```json
+{
+  "schema": "axm-machine-voice/need-snapshot/0.1",
+  "event_id": "event-004",
+  "source": {"kind": "machine-floor", "id": "main"},
+  "activity": {"kind": "activity", "id": "current-work"},
+  "task": {"kind": "task", "id": "build-proof"},
+  "inventory_scope": {"kind": "inventory-scope", "id": "current-run"},
+  "required_inputs": [],
+  "available_inputs": [],
+  "inventory_evidence": [],
+  "next_operations": ["inspect"]
+}
+```
+
+Each available input has exactly:
+
+```json
+{
+  "ref": {"kind": "input", "id": "..."},
+  "evidence": [{"kind": "evidence", "id": "..."}]
+}
+```
+
+The bounded-need producer can emit only when one or more explicitly required input references are absent from the named supplied inventory.
+
+If every required input is present, the result is normal `no_candidate` silence.
+
+A surfaced packet preserves:
+
+```json
+{
+  "bounded_inventory_only": true,
+  "global_unavailability_claimed": false
+}
+```
+
+So `I need something.` means only that the supplied bounded inventory lacks an explicitly required input. It never means that input is unavailable elsewhere, and the adapter does not infer hidden requirements.
 
 ## Shared reference object
 
@@ -144,7 +134,7 @@ No adapter infers aliases or hidden equivalence between differently named refere
 
 ## Outcomes
 
-All three adapters return the same `SnapshotOutcome` states:
+All four adapters return the same `SnapshotOutcome` states:
 
 - `emitted` — a candidate survived its exact producer and the communication gate;
 - `no_candidate` — the supplied state contains nothing that producer is allowed to say;
@@ -152,20 +142,21 @@ All three adapters return the same `SnapshotOutcome` states:
 
 Malformed or semantically ambiguous input raises an error instead of being converted into plausible communication.
 
-## Generic runtime API
+## Runtime API
+
+Generic callers use:
 
 ```python
 from axm_machine_voice import process_snapshot
 ```
 
-The explicit schema id routes to the exact adapter.
-
-Producer-specific callers can still use:
+Producer-specific callers may use:
 
 ```python
 process_alternative_snapshot(...)
 process_conflict_snapshot(...)
 process_unresolved_snapshot(...)
+process_need_snapshot(...)
 ```
 
 `SNAPSHOT_SCHEMA` remains an alias for the original alternative schema for backward compatibility.
@@ -175,7 +166,7 @@ process_unresolved_snapshot(...)
 The same zero-install command accepts all supported snapshots:
 
 ```bash
-python machine_voice.py snapshot examples/unresolved_snapshot.example.json \
+python machine_voice.py snapshot examples/need_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
@@ -187,20 +178,14 @@ Any supported snapshot can drive the same offline renderer:
 
 ```bash
 python examples/build_local_monolith_proof.py \
-  --snapshot examples/unresolved_snapshot.example.json \
+  --snapshot examples/need_snapshot.example.json \
   --active-ref activity:local-monolith-proof
-```
-
-Then open:
-
-```text
-local/monolith_proof.generated.html
 ```
 
 Rendering proves the handoff path worked. It does not prove the external source or evidence was truthful.
 
 ## Truth boundary
 
-The snapshot layer does not infer missing evidence, hidden constraints, metric meaning, assertion aliases, which side of a conflict is true, global impossibility from a bounded search, source authenticity, or active relevance.
+The snapshot layer does not infer missing evidence, hidden constraints/requirements, metric meaning, assertion aliases, which side of a conflict is true, global impossibility from a bounded search, global unavailability from a bounded inventory, source authenticity, or active relevance.
 
 A future snapshot format that needs more meaning must use an explicit schema revision. Do not add fields and expect older readers to ignore them.

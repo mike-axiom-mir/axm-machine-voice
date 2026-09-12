@@ -18,11 +18,14 @@ class BoundedNeedContractTests(unittest.TestCase):
             manifest["truth_boundary"]["not_claimed"],
         )
 
-    def test_readme_exposes_need_as_producer_not_snapshot_yet(self):
+    def test_readme_exposes_need_as_producer_and_supported_snapshot(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("produce_bounded_need", readme)
         self.assertIn("I need something.", readme)
-        self.assertIn("Python/API-only in this lane", readme)
+        self.assertIn("axm-machine-voice/need-snapshot/0.1", readme)
+        self.assertIn("examples/need_snapshot.example.json", readme)
+        self.assertIn("global unavailability from a bounded missing-input inventory", readme)
+        self.assertNotIn("Python/API-only in this lane", readme)
 
 
 if __name__ == "__main__":

@@ -122,12 +122,13 @@ All bundled producer examples use synthetic state and are not live Machine Floor
 
 ## Versioned state snapshot handoff
 
-Machine Voice currently accepts three strict snapshot schemas through one explicit schema-id router:
+All four producers now use one strict schema-id-routed snapshot transport:
 
 ```text
 axm-machine-voice/alternative-snapshot/0.1
 axm-machine-voice/conflict-snapshot/0.1
 axm-machine-voice/unresolved-snapshot/0.1
+axm-machine-voice/need-snapshot/0.1
 ```
 
 Examples:
@@ -136,9 +137,8 @@ Examples:
 examples/alternative_snapshot.example.json
 examples/conflict_snapshot.example.json
 examples/unresolved_snapshot.example.json
+examples/need_snapshot.example.json
 ```
-
-The new bounded-need producer is intentionally Python/API-only in this lane. A strict snapshot schema should be added only after the producer itself survives review and CI.
 
 The caller supplies active runtime context separately. A snapshot cannot certify its own relevance.
 
@@ -151,7 +151,7 @@ See [`docs/STATE_SNAPSHOT.md`](docs/STATE_SNAPSHOT.md) and the portable schemas 
 One zero-install command accepts every supported snapshot schema:
 
 ```bash
-python machine_voice.py snapshot examples/unresolved_snapshot.example.json \
+python machine_voice.py snapshot examples/need_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
