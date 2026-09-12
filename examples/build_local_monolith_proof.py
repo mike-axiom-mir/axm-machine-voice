@@ -4,6 +4,10 @@ Without `--snapshot`, the packet comes from the synthetic deterministic example.
 With `--snapshot`, the supplied versioned state snapshot is validated, processed by the
 real producer and communication gate, then embedded only when it actually emits.
 Snapshot relevance is checked against independently supplied `--active-ref` values.
+
+The proof parent also receives primitive `response-action` messages from the child and
+returns `response-status=received`. It deliberately does not claim journal persistence;
+real persistence belongs to the monolith/runtime actor + communication-journal path.
 """
 
 from html import escape
@@ -101,7 +105,31 @@ def build_html(
     }}
 
     if (message.type === \"packet-rendered\") {{
-      status.textContent = `rendered ${{message.event_id ?? \"unknown event\"}}`;
+      status.textContent = `rendered ${{message.event_id ?? \"unknown event\"}} — response bridge ready`;
+      return;
+    }}
+
+    if (message.type === \"response-action\") {{
+      if (message.event_id !== packet.event_id) {{
+        status.textContent = \"response rejected — event mismatch\";
+        frame.contentWindow.postMessage({{
+          protocol: PROTOCOL,
+          type: \"response-status\",
+          event_id: message.event_id ?? null,
+          action: message.action ?? null,
+          status: \"rejected\"
+        }}, \"*\");
+        return;
+      }}
+
+      status.textContent = `response ${{message.action ?? \"unknown\"}} received — proof only, not journaled`;
+      frame.contentWindow.postMessage({{
+        protocol: PROTOCOL,
+        type: \"response-status\",
+        event_id: message.event_id,
+        action: message.action ?? null,
+        status: \"received\"
+      }}, \"*\");
     }}
   }});
 }})();
