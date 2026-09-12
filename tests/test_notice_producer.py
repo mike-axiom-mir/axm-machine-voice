@@ -25,7 +25,7 @@ class GroundedNoticeProducerTests(unittest.TestCase):
         return NoticeSignal(
             observation=self.observation,
             rule=self.rule,
-            subjects=subjects or (self.subject_a, self.subject_b),
+            subjects=(self.subject_a, self.subject_b) if subjects is None else subjects,
             triggered=triggered,
             observation_evidence=self.observation_evidence,
             rule_evidence=self.rule_evidence,
