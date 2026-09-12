@@ -4,10 +4,12 @@ from typing import Any, Mapping
 
 from .core import GateContext, Ref, emit, evaluate
 from .history import CurrentPattern, HistoricalPattern, HistoryScope, produce_history_classification
+from .notice import NoticeSignal, produce_grounded_notice
 from .snapshot import SnapshotOutcome, process_snapshot as process_existing_snapshot
 
 
 HISTORY_SNAPSHOT_SCHEMA = "axm-machine-voice/history-snapshot/0.1"
+NOTICE_SNAPSHOT_SCHEMA = "axm-machine-voice/notice-snapshot/0.1"
 
 
 def _mapping(value: Any, path: str) -> Mapping[str, Any]:
@@ -83,6 +85,47 @@ def _historical_pattern(value: Any, path: str) -> HistoricalPattern:
     )
 
 
+def _notice_signal(value: Any, path: str) -> NoticeSignal:
+    obj = _mapping(value, path)
+    _exact_keys(
+        obj,
+        {
+            "observation",
+            "rule",
+            "subjects",
+            "triggered",
+            "observation_evidence",
+            "rule_evidence",
+            "trigger_evidence",
+        },
+        path,
+    )
+    return NoticeSignal(
+        observation=_ref(obj["observation"], f"{path}.observation"),
+        rule=_ref(obj["rule"], f"{path}.rule"),
+        subjects=_refs(obj["subjects"], f"{path}.subjects"),
+        triggered=obj["triggered"],
+        observation_evidence=_ref(obj["observation_evidence"], f"{path}.observation_evidence"),
+        rule_evidence=_ref(obj["rule_evidence"], f"{path}.rule_evidence"),
+        trigger_evidence=_ref(obj["trigger_evidence"], f"{path}.trigger_evidence"),
+    )
+
+
+def _gate_candidate(candidate, *, active_refs: tuple[Ref, ...], seen_fingerprints: frozenset[str]) -> SnapshotOutcome:
+    decision = evaluate(
+        candidate,
+        GateContext(active_refs=active_refs, seen_fingerprints=seen_fingerprints),
+    )
+    if not decision.eligible:
+        return SnapshotOutcome(status="rejected", reasons=decision.reasons, decision=decision)
+    return SnapshotOutcome(
+        status="emitted",
+        reasons=(),
+        decision=decision,
+        packet=emit(candidate, decision),
+    )
+
+
 def process_history_snapshot(
     snapshot: Mapping[str, Any],
     *,
@@ -136,18 +179,59 @@ def process_history_snapshot(
             status="no_candidate",
             reasons=("no_exact_match_and_history_scope_not_complete_for_domain",),
         )
-
-    decision = evaluate(
+    return _gate_candidate(
         candidate,
-        GateContext(active_refs=active_refs, seen_fingerprints=seen_fingerprints),
+        active_refs=active_refs,
+        seen_fingerprints=seen_fingerprints,
     )
-    if not decision.eligible:
-        return SnapshotOutcome(status="rejected", reasons=decision.reasons, decision=decision)
-    return SnapshotOutcome(
-        status="emitted",
-        reasons=(),
-        decision=decision,
-        packet=emit(candidate, decision),
+
+
+def process_notice_snapshot(
+    snapshot: Mapping[str, Any],
+    *,
+    active_refs: tuple[Ref, ...],
+    seen_fingerprints: frozenset[str] = frozenset(),
+) -> SnapshotOutcome:
+    """Validate one generic grounded notice snapshot and run it through producer + gate."""
+
+    if not active_refs:
+        raise ValueError("active_refs must contain at least one independently supplied reference")
+
+    obj = _mapping(snapshot, "snapshot")
+    _exact_keys(
+        obj,
+        {
+            "schema",
+            "event_id",
+            "source",
+            "activity",
+            "signal",
+            "next_operations",
+        },
+        "snapshot",
+    )
+
+    schema = _text(obj["schema"], "snapshot.schema")
+    if schema != NOTICE_SNAPSHOT_SCHEMA:
+        raise ValueError(f"Unsupported snapshot schema: {schema}")
+
+    candidate = produce_grounded_notice(
+        event_id=_text(obj["event_id"], "snapshot.event_id"),
+        source=_ref(obj["source"], "snapshot.source"),
+        activity=_ref(obj["activity"], "snapshot.activity"),
+        signal=_notice_signal(obj["signal"], "snapshot.signal"),
+        next_operations=_operations(obj["next_operations"], "snapshot.next_operations"),
+    )
+
+    if candidate is None:
+        return SnapshotOutcome(
+            status="no_candidate",
+            reasons=("explicit_notice_rule_not_triggered",),
+        )
+    return _gate_candidate(
+        candidate,
+        active_refs=active_refs,
+        seen_fingerprints=seen_fingerprints,
     )
 
 
@@ -157,12 +241,18 @@ def process_snapshot(
     active_refs: tuple[Ref, ...],
     seen_fingerprints: frozenset[str] = frozenset(),
 ) -> SnapshotOutcome:
-    """History-aware additive router; delegates every older schema unchanged."""
+    """Additive wrapper router; delegates every older schema unchanged."""
 
     obj = _mapping(snapshot, "snapshot")
     schema = _text(obj.get("schema"), "snapshot.schema")
     if schema == HISTORY_SNAPSHOT_SCHEMA:
         return process_history_snapshot(
+            obj,
+            active_refs=active_refs,
+            seen_fingerprints=seen_fingerprints,
+        )
+    if schema == NOTICE_SNAPSHOT_SCHEMA:
+        return process_notice_snapshot(
             obj,
             active_refs=active_refs,
             seen_fingerprints=seen_fingerprints,
