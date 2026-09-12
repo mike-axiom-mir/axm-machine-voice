@@ -57,7 +57,7 @@ The first working slice is deliberately small and standard-library-only:
 - semantic duplicate detection;
 - canonical StateTalk packets;
 - a fixed ten-phrase FloorVoice layer;
-- append-only JSONL event logging;
+- append-only communication history;
 - tests for truth-boundary failures.
 
 The implementation lives in [`src/axm_machine_voice`](src/axm_machine_voice), and the protocol is documented in [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
@@ -190,6 +190,36 @@ This channel adds no reasoning and no new authority. It transports the same stri
 
 See [`docs/MACHINE_CHANNEL.md`](docs/MACHINE_CHANNEL.md) for the contract.
 
+## Communication journal v0.1
+
+Machine Voice can preserve only the communications that actually passed the gate in a local append-only journal:
+
+```bash
+python machine_voice.py snapshot examples/alternative_snapshot.example.json \
+  --active-ref activity:local-monolith-proof \
+  --journal local/communication.jsonl
+```
+
+Run the same state again with the same journal and the previous semantic fingerprint is automatically inherited. The repeat is rejected as `duplicate_semantic_event`, so the Floor does not keep lighting the same message.
+
+The journal is **not telemetry**. `no_candidate`, rejected candidates, and invalid input do not become speech history.
+
+A human, AI, game, or machine can attach a structured response only to an event that really emitted:
+
+```bash
+python machine_voice.py respond local/communication.jsonl \
+  --event-id snapshot-example-001 \
+  --actor human:local-user \
+  --action inspect \
+  --target state:candidate-path-b
+```
+
+Journal records are hash-chained, making retained history tamper-evident against edits or reordering. This is deliberately **not** claimed to prove that an intact tail was never deleted; that would require an external checkpoint.
+
+v0.1 assumes one journal writer at a time.
+
+See [`docs/COMMUNICATION_JOURNAL.md`](docs/COMMUNICATION_JOURNAL.md) for the full contract.
+
 ## FloorVoice v0.1
 
 The human-facing vocabulary is intentionally primitive:
@@ -226,6 +256,7 @@ No proposal becomes canon because it was surfaced.
 - execute arbitrary proposal contents;
 - verify the external provenance of a snapshot merely because its schema is valid;
 - let a snapshot certify its own relevance to the current runtime state;
+- prove an intact journal tail was never deleted;
 - claim the bundled local demo or synthetic producer example is a live discovery.
 
 Those boundaries are intentional. Richer state capabilities can be connected later without changing the truth boundary.
@@ -240,9 +271,9 @@ real state snapshot + independent active context
 strict adapter
         ↓
 producer -> Candidate -> communication gate -> StateTalk packet
-        |                                      |
-        v                                      v
-machine JSON channel                    local human renderer
+        |                    |                 |
+        v                    v                 v
+communication journal   machine JSON      local human renderer
 ```
 
 The local page must continue to distinguish demo/example material from packets whose provenance points to a live producer. A small real signal with inspectable evidence is preferable to an impressive fake one.
