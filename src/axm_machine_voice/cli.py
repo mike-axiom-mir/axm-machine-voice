@@ -10,10 +10,13 @@ from .core import Ref, canonical_json
 from .snapshot import outcome_dict, process_alternative_snapshot
 
 
+MACHINE_CHANNEL_PROTOCOL = "axm-machine-voice/machine-channel/0.1"
+
+
 def parse_ref_key(value: str) -> Ref:
     kind, separator, identifier = value.partition(":")
     if not separator or not kind.strip() or not identifier.strip():
-        raise argparse.ArgumentTypeError("reference must use non-empty kind:id form")
+        raise ValueError("reference must use non-empty kind:id form")
     return Ref(kind, identifier)
 
 
@@ -47,8 +50,7 @@ def _parser() -> argparse.ArgumentParser:
     snapshot.add_argument(
         "--active-ref",
         action="append",
-        type=parse_ref_key,
-        required=True,
+        default=[],
         help="Independently supplied active runtime reference in kind:id form. Repeat as needed.",
     )
     snapshot.add_argument(
@@ -60,14 +62,18 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _envelope(payload: Mapping[str, Any]) -> dict[str, Any]:
+    return {"protocol": MACHINE_CHANNEL_PROTOCOL, **dict(payload)}
+
+
 def _invalid(error: Exception) -> dict[str, Any]:
-    return {
+    return _envelope({
         "status": "invalid",
         "reasons": [type(error).__name__],
         "error": str(error),
         "fingerprint": None,
         "packet": None,
-    }
+    })
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -78,13 +84,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error(f"unsupported command: {args.command}")
 
     try:
+        if not args.active_ref:
+            raise ValueError("snapshot command requires at least one --active-ref")
+        active_refs = tuple(parse_ref_key(value) for value in args.active_ref)
+        if any(not value.strip() for value in args.seen_fingerprint):
+            raise ValueError("--seen-fingerprint values must be non-empty")
+
         snapshot = _read_snapshot(args.source)
         outcome = process_alternative_snapshot(
             snapshot,
-            active_refs=tuple(args.active_ref),
+            active_refs=active_refs,
             seen_fingerprints=frozenset(args.seen_fingerprint),
         )
-        result = outcome_dict(outcome)
+        result = _envelope(outcome_dict(outcome))
         exit_code = 0
     except (OSError, json.JSONDecodeError, ValueError) as error:
         result = _invalid(error)
