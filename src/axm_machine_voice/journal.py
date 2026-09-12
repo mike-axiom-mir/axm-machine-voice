@@ -90,11 +90,12 @@ def _validate_record(record: Mapping[str, Any], *, expected_sequence: int, previ
 
 
 def read_journal(path: str | Path) -> tuple[dict[str, Any], ...]:
-    """Read and verify the complete append-only journal.
+    """Read and verify the complete hash-linked local journal.
 
-    The hash chain is tamper-evident, not tamper-proof: it detects edits/reordering of
-    records that remain present, but no local file format can prove that an attacker did
-    not delete an intact tail without an external checkpoint.
+    The chain detects accidental corruption, reordering, and edits whose hashes were not
+    recomputed. It is not cryptographic authentication: a writer with full file access can
+    rewrite records and recompute this unkeyed hash chain. Tail deletion is also invisible
+    without an external checkpoint. Stronger claims require an anchored/signature layer.
     """
 
     journal_path = Path(path)
