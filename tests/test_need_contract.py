@@ -25,7 +25,11 @@ class BoundedNeedContractTests(unittest.TestCase):
         self.assertIn("axm-machine-voice/need-snapshot/0.1", readme)
         self.assertIn("examples/need_snapshot.example.json", readme)
         self.assertIn("global unavailability from a bounded missing-input inventory", readme)
-        self.assertNotIn("Python/API-only in this lane", readme)
+
+        need_start = readme.index("### `I need something.`")
+        need_end = readme.index("### `Look here.`", need_start)
+        need_section = readme[need_start:need_end]
+        self.assertNotIn("Python/API-only in this lane", need_section)
 
 
 if __name__ == "__main__":

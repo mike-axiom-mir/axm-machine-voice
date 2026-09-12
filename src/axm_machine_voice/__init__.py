@@ -29,6 +29,7 @@ from .journal import (
 )
 from .need import AvailableInputState, produce_bounded_need
 from .producer import OptionState, produce_lower_cost_alternative
+from .residual import ResidualCheck, produce_residual_look
 from .snapshot import (
     ALTERNATIVE_SNAPSHOT_SCHEMA,
     CONFLICT_SNAPSHOT_SCHEMA,
@@ -65,6 +66,7 @@ __all__ = [
     "ProposalStatus",
     "Ref",
     "Relation",
+    "ResidualCheck",
     "SNAPSHOT_SCHEMA",
     "SnapshotOutcome",
     "StateTalkPacket",
@@ -87,6 +89,7 @@ __all__ = [
     "produce_bounded_unresolved",
     "produce_exact_conflict",
     "produce_lower_cost_alternative",
+    "produce_residual_look",
     "read_journal",
     "render_floorvoice",
     "semantic_fingerprint",

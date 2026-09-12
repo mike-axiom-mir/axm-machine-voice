@@ -54,6 +54,14 @@
       "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
     },
     {
+      "id": "producer.residual-look",
+      "description": "Deterministic producer can surface explicitly measured expected-vs-observed numeric residuals that exceed an explicitly supplied tolerance under an explicitly named metric; it does not infer cause, novelty, model invalidity, or observation invalidity.",
+      "provides": ["state.residual", "communication.candidate"],
+      "accepts": ["state.expected", "state.observed", "metric", "tolerance", "state.context", "evidence"],
+      "tags": ["producer", "state", "deterministic", "residual", "observation", "evidence"],
+      "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
+    },
+    {
       "id": "interface.floorvoice",
       "description": "Offline local FloorVoice renders a fixed tiny vocabulary from StateTalk kind and supports bounded Inspect, Compare, and Acknowledge response intents without inventing actor identity.",
       "provides": ["interface.local", "interface.floorvoice", "communication.response.intent"],
@@ -113,6 +121,8 @@
       "resolution of which side of a surfaced conflict is true",
       "global impossibility from a bounded unresolved search",
       "global unavailability from a bounded missing-input inventory",
+      "cause or novelty merely because an expected-vs-observed residual exceeds a supplied tolerance",
+      "model invalidity or observation invalidity merely because a residual exceeds tolerance",
       "cross-module interoperability before exact composition testing",
       "actor authentication by the local FloorVoice renderer",
       "cryptographic authenticity of the local unkeyed journal"
