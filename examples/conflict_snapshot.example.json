@@ -1,0 +1,68 @@
+{
+  "schema": "axm-machine-voice/conflict-snapshot/0.1",
+  "event_id": "conflict-snapshot-example-001",
+  "source": {
+    "kind": "machine-floor",
+    "id": "conflict-snapshot-example"
+  },
+  "activity": {
+    "kind": "activity",
+    "id": "local-monolith-proof"
+  },
+  "assertions": [
+    {
+      "ref": {
+        "kind": "assertion",
+        "id": "sensor-a"
+      },
+      "scope": {
+        "kind": "scope",
+        "id": "synthetic-test-run"
+      },
+      "subject": {
+        "kind": "state",
+        "id": "door-7"
+      },
+      "property": {
+        "kind": "property",
+        "id": "open"
+      },
+      "value": true,
+      "evidence": [
+        {
+          "kind": "evidence",
+          "id": "sensor-a-reading"
+        }
+      ]
+    },
+    {
+      "ref": {
+        "kind": "assertion",
+        "id": "sensor-b"
+      },
+      "scope": {
+        "kind": "scope",
+        "id": "synthetic-test-run"
+      },
+      "subject": {
+        "kind": "state",
+        "id": "door-7"
+      },
+      "property": {
+        "kind": "property",
+        "id": "open"
+      },
+      "value": false,
+      "evidence": [
+        {
+          "kind": "evidence",
+          "id": "sensor-b-reading"
+        }
+      ]
+    }
+  ],
+  "next_operations": [
+    "inspect",
+    "compare"
+  ]
+}
