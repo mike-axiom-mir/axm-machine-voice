@@ -297,6 +297,7 @@
   });
 
   window.addEventListener("message", event => {
+    if (window.parent === window || event.source !== window.parent) return;
     const message = event.data;
     if (!message || message.protocol !== PROTOCOL || message.type !== "load-packet") return;
     try {
