@@ -1,8 +1,8 @@
 # Machine Channel v0.1
 
-Machine Voice has a non-human command surface for monoliths, local tools, AIs, and other machines that need the canonical result without opening the FloorVoice page.
+Machine Voice has a non-human command surface for monoliths, local tools, AIs, and other machines that need canonical results without opening FloorVoice.
 
-Protocol identifier:
+Protocol:
 
 ```text
 axm-machine-voice/machine-channel/0.1
@@ -10,124 +10,91 @@ axm-machine-voice/machine-channel/0.1
 
 The channel is deterministic, local, standard-library-only, and emits exactly one canonical JSON object on stdout per invocation.
 
-## Zero-install snapshot use
+## Snapshot command
 
-From the repository root:
+One command accepts every explicitly supported snapshot schema:
 
 ```bash
-python machine_voice.py snapshot examples/alternative_snapshot.example.json \
+python machine_voice.py snapshot examples/unresolved_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
-The snapshot can also be piped over stdin:
+Currently supported snapshot schemas are:
+
+```text
+axm-machine-voice/alternative-snapshot/0.1
+axm-machine-voice/conflict-snapshot/0.1
+axm-machine-voice/unresolved-snapshot/0.1
+```
+
+Routing is based only on the explicit `schema` id. Unsupported ids fail closed.
+
+Snapshots may also be piped over stdin:
 
 ```bash
-cat examples/alternative_snapshot.example.json | \
+cat examples/unresolved_snapshot.example.json | \
 python machine_voice.py snapshot - \
   --active-ref activity:local-monolith-proof
 ```
 
-`--active-ref` is intentionally outside the snapshot. It represents the caller/runtime's independently supplied active state and prevents the snapshot from certifying its own relevance.
+`--active-ref` stays outside the snapshot so a snapshot cannot certify its own relevance.
 
-Repeat `--active-ref` when multiple references are active.
-
-Previously emitted semantic fingerprints can be supplied with repeated `--seen-fingerprint` arguments so duplicate communication is rejected by the normal gate.
-
-A persistent communication journal can supply prior fingerprints automatically and append only newly emitted communication:
+Repeated `--seen-fingerprint` arguments suppress already-emitted semantics. A communication journal can provide prior fingerprints automatically:
 
 ```bash
-python machine_voice.py snapshot examples/alternative_snapshot.example.json \
+python machine_voice.py snapshot examples/unresolved_snapshot.example.json \
   --active-ref activity:local-monolith-proof \
   --journal local/communication.jsonl
 ```
 
-## Structured response command
+Only newly emitted communication is appended.
 
-A human, AI, game, or other machine can record a structured response to an event that exists in the communication journal:
+## Structured response command
 
 ```bash
 python machine_voice.py respond local/communication.jsonl \
-  --event-id snapshot-example-001 \
+  --event-id unresolved-snapshot-example-001 \
   --actor human:local-user \
-  --action inspect \
-  --target state:candidate-path-b
+  --action inspect
 ```
 
-The response command does not create a new StateTalk claim. It appends interaction structure to the journal.
+The response command appends interaction structure to an already emitted journal event. It does not create a new StateTalk claim.
 
 ## Response contract
 
-Every normal or invalid invocation returns exactly one JSON object.
+Every invocation returns exactly one JSON object.
 
-Example emitted envelope:
-
-```json
-{
-  "protocol": "axm-machine-voice/machine-channel/0.1",
-  "status": "emitted",
-  "reasons": [],
-  "fingerprint": "...",
-  "packet": {"version": "0.1"}
-}
-```
-
-Valid protocol outcomes use exit code `0`:
+Valid exit-code-0 states:
 
 - `emitted` — a canonical StateTalk packet exists;
-- `no_candidate` — the producer found nothing that qualified, so silence is the correct result;
-- `rejected` — a candidate existed but the communication gate refused it, for example because it was irrelevant or duplicated;
+- `no_candidate` — the exact producer found nothing it is allowed to say;
+- `rejected` — a candidate existed but the communication gate refused it;
 - `recorded` — a structured response was appended to a valid journal event.
 
-A `recorded` result includes a `journal_record` summary containing its sequence, hash, type, and referenced event id.
+Invalid input uses exit code `2` and still returns the same versioned envelope with `status: invalid`.
 
-Invalid input uses exit code `2` and still returns the same versioned envelope with:
-
-```json
-{
-  "protocol": "axm-machine-voice/machine-channel/0.1",
-  "status": "invalid",
-  "reasons": ["..."],
-  "error": "...",
-  "fingerprint": null,
-  "packet": null
-}
-```
-
-No explanatory prose is mixed into stdout. Callers do not need to scrape human text.
+No explanatory prose is mixed into stdout.
 
 ## Python integration
 
-Installed/importing runtimes can bypass the process boundary and call:
+Generic callers can use:
 
 ```python
-from axm_machine_voice import process_alternative_snapshot
+from axm_machine_voice import process_snapshot
 ```
 
-with independently supplied `active_refs`.
-
-Journal-aware runtimes can additionally use:
+Producer-specific callers can use:
 
 ```python
-from axm_machine_voice import (
-    append_emission,
-    append_response,
-    emitted_fingerprints,
-    read_journal,
-)
+process_alternative_snapshot(...)
+process_conflict_snapshot(...)
+process_unresolved_snapshot(...)
 ```
 
-The CLI does not add reasoning semantics. It transports the same strict snapshot adapter, deterministic producer, communication gate, and explicit journal operations used elsewhere.
+Journal-aware runtimes can additionally use `append_emission`, `append_response`, `emitted_fingerprints`, and `read_journal`.
 
 ## Truth boundary
 
-The machine channel does **not**:
+The machine channel does not authenticate snapshot creators or response actors, prove evidence true, choose which side of a conflict is correct, turn a bounded unresolved search into global impossibility, make proposals canonical, execute proposal contents, generate explanatory prose, or convert invalid state into a plausible guess.
 
-- authenticate who created a snapshot;
-- prove referenced evidence is truthful;
-- make a proposal canonical;
-- execute proposal contents;
-- generate human language;
-- convert invalid state into a plausible guess;
-- make a recorded response correct merely because it was appended.
-
-Its job is narrower: preserve a deterministic, versioned route from supplied state to canonical Machine Voice output, grounded silence/rejection, or an explicit structured interaction record.
+Its job is narrower: preserve one deterministic versioned route from supplied state to canonical Machine Voice output, grounded silence/rejection, or an explicit structured interaction record.
