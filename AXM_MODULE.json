@@ -85,6 +85,29 @@
       "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
     },
     {
+      "id": "producer.bounded-unresolved",
+      "description": "Deterministic producer can surface that a named bounded search remains unresolved only when at least one grounded attempt was evaluated and every supplied attempt misses at least one explicit required constraint; it does not claim no solution exists outside that search scope.",
+      "provides": [
+        "state.unresolved",
+        "communication.candidate"
+      ],
+      "accepts": [
+        "state.attempt",
+        "state.constraint",
+        "state.context",
+        "evidence"
+      ],
+      "tags": [
+        "producer",
+        "state",
+        "deterministic",
+        "unresolved",
+        "bounded-search",
+        "evidence"
+      ],
+      "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
+    },
+    {
       "id": "interface.floorvoice",
       "description": "Offline local FloorVoice renders a fixed tiny vocabulary from StateTalk kind and supports bounded Inspect, Compare, and Acknowledge response intents without inventing actor identity.",
       "provides": [
@@ -176,6 +199,7 @@
       "general autonomous idea discovery",
       "truth of externally supplied evidence merely because a packet renders",
       "resolution of which side of a surfaced conflict is true",
+      "global impossibility from a bounded unresolved search",
       "cross-module interoperability before exact composition testing",
       "actor authentication by the local FloorVoice renderer",
       "cryptographic authenticity of the local unkeyed journal"
