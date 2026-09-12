@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "history-snapshot-0.1.schema.json",
+  "title": "AXM Machine Voice History Snapshot v0.1",
+  "type": "object",
+  "required": [
+    "schema",
+    "event_id",
+    "source",
+    "activity",
+    "current",
+    "history_scope",
+    "history",
+    "next_operations"
+  ],
+  "properties": {
+    "schema": {"const": "axm-machine-voice/history-snapshot/0.1"},
+    "event_id": {"type": "string", "minLength": 1},
+    "source": {"$ref": "#/$defs/ref"},
+    "activity": {"$ref": "#/$defs/ref"},
+    "current": {"$ref": "#/$defs/current_pattern"},
+    "history_scope": {"$ref": "#/$defs/history_scope"},
+    "history": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/historical_pattern"}
+    },
+    "next_operations": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "id": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/ref"}
+    },
+    "current_pattern": {
+      "type": "object",
+      "required": ["ref", "domain", "signature", "evidence"],
+      "properties": {
+        "ref": {"$ref": "#/$defs/ref"},
+        "domain": {"$ref": "#/$defs/ref"},
+        "signature": {},
+        "evidence": {"$ref": "#/$defs/evidence_refs"}
+      },
+      "additionalProperties": false
+    },
+    "history_scope": {
+      "type": "object",
+      "required": ["ref", "complete_for_domain", "evidence"],
+      "properties": {
+        "ref": {"$ref": "#/$defs/ref"},
+        "complete_for_domain": {"type": "boolean"},
+        "evidence": {"$ref": "#/$defs/evidence_refs"}
+      },
+      "additionalProperties": false
+    },
+    "historical_pattern": {
+      "type": "object",
+      "required": ["ref", "position", "domain", "signature", "evidence"],
+      "properties": {
+        "ref": {"$ref": "#/$defs/ref"},
+        "position": {"type": "integer", "minimum": 0},
+        "domain": {"$ref": "#/$defs/ref"},
+        "signature": {},
+        "evidence": {"$ref": "#/$defs/evidence_refs"}
+      },
+      "additionalProperties": false
+    }
+  }
+}
