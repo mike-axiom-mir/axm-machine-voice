@@ -28,10 +28,21 @@ from .journal import (
     read_journal,
 )
 from .producer import OptionState, produce_lower_cost_alternative
-from .snapshot import SNAPSHOT_SCHEMA, SnapshotOutcome, outcome_dict, process_alternative_snapshot
+from .snapshot import (
+    ALTERNATIVE_SNAPSHOT_SCHEMA,
+    CONFLICT_SNAPSHOT_SCHEMA,
+    SNAPSHOT_SCHEMA,
+    SnapshotOutcome,
+    outcome_dict,
+    process_alternative_snapshot,
+    process_conflict_snapshot,
+    process_snapshot,
+)
 
 __all__ = [
+    "ALTERNATIVE_SNAPSHOT_SCHEMA",
     "AssertionState",
+    "CONFLICT_SNAPSHOT_SCHEMA",
     "Candidate",
     "Claim",
     "CommunicationKind",
@@ -58,6 +69,8 @@ __all__ = [
     "outcome_dict",
     "packet_dict",
     "process_alternative_snapshot",
+    "process_conflict_snapshot",
+    "process_snapshot",
     "produce_exact_conflict",
     "produce_lower_cost_alternative",
     "read_journal",
