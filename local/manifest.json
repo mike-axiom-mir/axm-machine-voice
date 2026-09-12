@@ -1,0 +1,17 @@
+{
+  "id": "axm-machine-voice",
+  "name": "AXM Machine Voice",
+  "version": "0.2-local",
+  "entry": "local/index.html",
+  "mode": "offline",
+  "network_required": false,
+  "ai_required": false,
+  "account_required": false,
+  "cloud_required": false,
+  "bridge": {
+    "protocol": "axm-machine-voice/local-bridge/0.1",
+    "accepts": ["load-packet"],
+    "emits": ["ready", "packet-rendered"]
+  },
+  "truth_boundary": "The local renderer displays supplied StateTalk structure and fixed FloorVoice phrases. Rendering is not validation and does not make a proposal true or canonical."
+}
