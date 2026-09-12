@@ -27,7 +27,7 @@ class HistoryRepeatNovelContractTests(unittest.TestCase):
             not_claimed,
         )
 
-    def test_history_docs_keep_repeat_and_novelty_paired_and_producer_only_for_now(self):
+    def test_history_docs_keep_pair_and_expose_supported_snapshot(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         docs = (ROOT / "docs" / "HISTORY_PRODUCER.md").read_text(encoding="utf-8")
         combined = readme + docs
@@ -38,7 +38,14 @@ class HistoryRepeatNovelContractTests(unittest.TestCase):
         self.assertIn("global_novelty_claimed", combined)
         self.assertIn("history_scope_completeness_authenticated", combined)
         self.assertIn("history_ordering_authenticated", combined)
-        self.assertIn("history producer is intentionally Python/API-only in this lane", readme)
+        self.assertIn("axm-machine-voice/history-snapshot/0.1", combined)
+        self.assertIn("examples/history_snapshot.example.json", combined)
+        self.assertIn("examples/history_novel_snapshot.example.json", combined)
+
+        section_start = readme.index("### `This happened before.` / `This is new.`")
+        section_end = readme.index("All bundled producer examples", section_start)
+        history_section = readme[section_start:section_end]
+        self.assertNotIn("Python/API-only in this lane", history_section)
 
 
 if __name__ == "__main__":
