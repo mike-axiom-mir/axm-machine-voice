@@ -151,18 +151,21 @@ Example:
 examples/alternative_snapshot.example.json
 ```
 
-Run that snapshot through the exact same local proof path:
+Run that snapshot through the exact same local proof path, while supplying the runtime's active context separately:
 
 ```bash
 python examples/build_local_monolith_proof.py \
-  --snapshot examples/alternative_snapshot.example.json
+  --snapshot examples/alternative_snapshot.example.json \
+  --active-ref activity:local-monolith-proof
 ```
 
-The adapter rejects unknown fields rather than silently discarding meaning. `no_candidate` is a normal silence state; a packet is produced only when the supplied state qualifies and the communication gate accepts it.
+The snapshot's `activity` says what the producer believes its finding relates to. It does **not** certify that activity as current. The communication gate compares that declaration with independently supplied active runtime references; a mismatch is rejected as `not_relevant_to_active_context`.
+
+The adapter also rejects unknown fields rather than silently discarding meaning. `no_candidate` is a normal silence state; a packet is produced only when the supplied state qualifies and the communication gate accepts it.
 
 The snapshot contract and truth boundary are documented in [`docs/STATE_SNAPSHOT.md`](docs/STATE_SNAPSHOT.md).
 
-This is the intended handoff for the next monolith test: the monolith can supply a compatible snapshot without changing Machine Voice code.
+This is the intended handoff for the next monolith test: the monolith can supply a compatible snapshot and its actual active context without changing Machine Voice code.
 
 ## FloorVoice v0.1
 
@@ -199,6 +202,7 @@ No proposal becomes canon because it was surfaced.
 - decide that a surfaced proposal is correct;
 - execute arbitrary proposal contents;
 - verify the external provenance of a snapshot merely because its schema is valid;
+- let a snapshot certify its own relevance to the current runtime state;
 - claim the bundled local demo or synthetic producer example is a live discovery.
 
 Those boundaries are intentional. Richer state capabilities can be connected later without changing the truth boundary.
@@ -208,7 +212,11 @@ Those boundaries are intentional. Richer state capabilities can be connected lat
 The next milestone is to replace the bundled example snapshot with state exported by an actual monolith/Machine Floor integration while preserving the same path:
 
 ```text
-real state snapshot -> strict adapter -> producer -> Candidate -> communication gate -> StateTalk packet -> local/monolith renderer
+real state snapshot + independent active context
+        ↓
+strict adapter
+        ↓
+producer -> Candidate -> communication gate -> StateTalk packet -> local/monolith renderer
 ```
 
 The local page must continue to distinguish demo/example material from packets whose provenance points to a live producer. A small real signal with inspectable evidence is preferable to an impressive fake one.
