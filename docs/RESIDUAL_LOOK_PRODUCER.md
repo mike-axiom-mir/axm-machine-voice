@@ -105,7 +105,7 @@ The producer establishes only:
 
 It does not interpret the cause or meaning of that residual.
 
-## Runnable example
+## Runnable producer example
 
 ```bash
 python examples/run_residual_producer.py
@@ -117,8 +117,29 @@ This writes:
 examples/residual_packet.generated.json
 ```
 
-The bundled example uses synthetic state. It is not a live Machine Floor observation or a scientific discovery.
+## Versioned snapshot handoff
 
-## Transport boundary
+The producer also accepts strict state through:
 
-v0.1 producer review comes first. The strict versioned snapshot handoff for this producer should be added only after the producer itself passes independently, following the same pattern used by the earlier Machine Voice capabilities.
+```text
+axm-machine-voice/residual-snapshot/0.1
+```
+
+Example:
+
+```text
+examples/residual_snapshot.example.json
+```
+
+The same generic machine command handles it:
+
+```bash
+python machine_voice.py snapshot examples/residual_snapshot.example.json \
+  --active-ref activity:local-monolith-proof
+```
+
+The same communication journal can suppress repeated residual semantics, and the same offline monolith proof can render the resulting `Look here.` packet.
+
+The snapshot remains strict: unknown fields fail closed, active relevance is supplied independently by the runtime, and the transport does not upgrade a residual into an explanation.
+
+All bundled residual examples use synthetic state. They are not live Machine Floor observations or scientific discoveries.
