@@ -1,0 +1,100 @@
+"""Build one offline HTML proof that drives the local renderer through its bridge.
+
+The packet comes from the real deterministic producer/gate path in
+`run_deterministic_producer.py`, but its input state remains synthetic test data.
+The generated harness labels that boundary explicitly.
+"""
+
+from pathlib import Path
+import argparse
+import json
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+EXAMPLES = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(EXAMPLES))
+
+from axm_machine_voice import packet_dict  # noqa: E402
+from run_deterministic_producer import build_packet  # noqa: E402
+
+
+BRIDGE_PROTOCOL = "axm-machine-voice/local-bridge/0.1"
+
+
+def build_html() -> str:
+    packet = packet_dict(build_packet())
+    # Prevent a future state/reference value containing a literal closing script tag
+    # from escaping the inline JavaScript payload.
+    packet_json = json.dumps(packet, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+
+    return f"""<!doctype html>
+<html lang=\"en\">
+<head>
+  <meta charset=\"utf-8\">
+  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
+  <title>AXM Machine Voice — Monolith Proof Harness</title>
+  <style>
+    :root {{ color-scheme: dark; font-family: system-ui, sans-serif; background:#090d12; color:#edf3f8; }}
+    * {{ box-sizing:border-box; }}
+    body {{ margin:0; min-height:100vh; background:#090d12; }}
+    header {{ padding:12px 16px; border-bottom:1px solid #24303d; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }}
+    strong {{ font-size:14px; }}
+    .truth {{ color:#f0c36a; font-size:12px; }}
+    #status {{ margin-left:auto; font:12px ui-monospace, monospace; color:#9eb0c0; }}
+    iframe {{ display:block; width:100%; height:calc(100vh - 58px); border:0; }}
+  </style>
+</head>
+<body>
+<header>
+  <strong>Monolith bridge proof</strong>
+  <span class=\"truth\">synthetic state → real producer/gate → canonical packet → local renderer</span>
+  <span id=\"status\">waiting for renderer</span>
+</header>
+<iframe id=\"voice\" src=\"index.html\" title=\"AXM Machine Voice local renderer\"></iframe>
+<script>
+(() => {{
+  \"use strict\";
+  const PROTOCOL = {json.dumps(BRIDGE_PROTOCOL)};
+  const packet = {packet_json};
+  const frame = document.getElementById(\"voice\");
+  const status = document.getElementById(\"status\");
+
+  window.addEventListener(\"message\", event => {{
+    if (event.source !== frame.contentWindow) return;
+    const message = event.data;
+    if (!message || message.protocol !== PROTOCOL) return;
+
+    if (message.type === \"ready\") {{
+      status.textContent = \"renderer ready — sending packet\";
+      frame.contentWindow.postMessage({{ protocol: PROTOCOL, type: \"load-packet\", packet }}, \"*\");
+      return;
+    }}
+
+    if (message.type === \"packet-rendered\") {{
+      status.textContent = `rendered ${{message.event_id ?? \"unknown event\"}}`;
+    }}
+  }});
+}})();
+</script>
+</body>
+</html>
+"""
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=ROOT / "local" / "monolith_proof.generated.html",
+        help="Generated proof page. Keep it beside local/index.html unless you adjust the iframe path.",
+    )
+    args = parser.parse_args()
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(build_html(), encoding="utf-8")
+    print(args.output)
+
+
+if __name__ == "__main__":
+    main()
