@@ -78,14 +78,23 @@ def _operations(value: Any, path: str) -> tuple[str, ...]:
 def process_alternative_snapshot(
     snapshot: Mapping[str, Any],
     *,
+    active_refs: tuple[Ref, ...],
     seen_fingerprints: frozenset[str] = frozenset(),
 ) -> SnapshotOutcome:
     """Validate one versioned snapshot and run it through producer + communication gate.
+
+    `snapshot.activity` is the producer's declared relevance. `active_refs` is supplied
+    independently by the surrounding runtime and is what the communication gate treats
+    as actually active. Keeping those inputs separate prevents a snapshot from certifying
+    its own relevance.
 
     The adapter fails closed on unknown fields. A future producer-specific concept must
     receive a schema revision rather than being silently ignored by an older adapter.
     `no_candidate` is a normal outcome: silence is not treated as an error.
     """
+
+    if not active_refs:
+        raise ValueError("active_refs must contain at least one independently supplied reference")
 
     obj = _mapping(snapshot, "snapshot")
     expected = {
@@ -110,11 +119,11 @@ def process_alternative_snapshot(
         raise ValueError("snapshot.alternatives must be an array")
 
     source = _ref(obj["source"], "snapshot.source")
-    activity = _ref(obj["activity"], "snapshot.activity")
+    declared_activity = _ref(obj["activity"], "snapshot.activity")
     candidate = produce_lower_cost_alternative(
         event_id=_text(obj["event_id"], "snapshot.event_id"),
         source=source,
-        activity=activity,
+        activity=declared_activity,
         cost_metric=_ref(obj["cost_metric"], "snapshot.cost_metric"),
         current=_option(obj["current"], "snapshot.current"),
         alternatives=tuple(
@@ -133,7 +142,7 @@ def process_alternative_snapshot(
 
     decision = evaluate(
         candidate,
-        GateContext(active_refs=(activity,), seen_fingerprints=seen_fingerprints),
+        GateContext(active_refs=active_refs, seen_fingerprints=seen_fingerprints),
     )
     if not decision.eligible:
         return SnapshotOutcome(status="rejected", reasons=decision.reasons, decision=decision)
