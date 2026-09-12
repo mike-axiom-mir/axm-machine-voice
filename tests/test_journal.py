@@ -24,8 +24,10 @@ class CommunicationJournalTests(unittest.TestCase):
         self.example = ROOT / "examples" / "alternative_snapshot.example.json"
         self.active = Ref("activity", "local-monolith-proof")
 
-    def packet(self):
+    def packet(self, *, candidate_cost=None):
         snapshot = json.loads(self.example.read_text(encoding="utf-8"))
+        if candidate_cost is not None:
+            snapshot["alternatives"][1]["cost"] = candidate_cost
         outcome = process_alternative_snapshot(snapshot, active_refs=(self.active,))
         self.assertEqual(outcome.status, "emitted")
         return outcome.packet
@@ -52,6 +54,19 @@ class CommunicationJournalTests(unittest.TestCase):
             append_emission(path, packet)
             with self.assertRaisesRegex(ValueError, "already contains"):
                 append_emission(path, packet)
+            self.assertEqual(len(read_journal(path)), 1)
+
+    def test_same_event_id_cannot_point_to_two_different_emissions(self):
+        first = self.packet(candidate_cost=7)
+        second = self.packet(candidate_cost=6)
+        self.assertEqual(first.event_id, second.event_id)
+        self.assertNotEqual(first.fingerprint, second.fingerprint)
+
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "voice.jsonl"
+            append_emission(path, first)
+            with self.assertRaisesRegex(ValueError, "event_id"):
+                append_emission(path, second)
             self.assertEqual(len(read_journal(path)), 1)
 
     def test_response_must_reference_real_emitted_event(self):
