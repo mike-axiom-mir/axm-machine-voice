@@ -50,7 +50,13 @@ from .snapshot import (
     process_residual_snapshot,
     process_unresolved_snapshot,
 )
-from .snapshot_router import HISTORY_SNAPSHOT_SCHEMA, process_history_snapshot, process_snapshot
+from .snapshot_router import (
+    HISTORY_SNAPSHOT_SCHEMA,
+    NOTICE_SNAPSHOT_SCHEMA,
+    process_history_snapshot,
+    process_notice_snapshot,
+    process_snapshot,
+)
 from .unresolved import AttemptState, produce_bounded_unresolved
 
 __all__ = [
@@ -73,6 +79,7 @@ __all__ = [
     "JOURNAL_PROTOCOL",
     "JsonlEventLog",
     "NEED_SNAPSHOT_SCHEMA",
+    "NOTICE_SNAPSHOT_SCHEMA",
     "NoticeSignal",
     "OUTCOME_SNAPSHOT_SCHEMA",
     "OptionState",
@@ -99,6 +106,7 @@ __all__ = [
     "process_conflict_snapshot",
     "process_history_snapshot",
     "process_need_snapshot",
+    "process_notice_snapshot",
     "process_outcome_snapshot",
     "process_residual_snapshot",
     "process_snapshot",
