@@ -1,0 +1,18 @@
+{
+  "schema": "axm-machine-voice/notice-snapshot/0.1",
+  "event_id": "notice-snapshot-example-001",
+  "source": {"kind": "machine-floor", "id": "main"},
+  "activity": {"kind": "activity", "id": "local-monolith-proof"},
+  "signal": {
+    "observation": {"kind": "observation", "id": "detector-output-001"},
+    "rule": {"kind": "notice-rule", "id": "explicit-detector-rule-001"},
+    "subjects": [
+      {"kind": "state-object", "id": "demo-target"}
+    ],
+    "triggered": true,
+    "observation_evidence": {"kind": "evidence", "id": "demo-observation"},
+    "rule_evidence": {"kind": "evidence", "id": "demo-rule-definition"},
+    "trigger_evidence": {"kind": "evidence", "id": "demo-trigger-result"}
+  },
+  "next_operations": ["inspect"]
+}
