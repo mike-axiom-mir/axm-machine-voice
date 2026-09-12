@@ -25,11 +25,21 @@ class ResidualLookContractTests(unittest.TestCase):
             not_claimed,
         )
 
-    def test_readme_exposes_residual_producer_but_not_snapshot_yet(self):
+    def test_readme_exposes_residual_producer_and_supported_snapshot(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("produce_residual_look", readme)
         self.assertIn("Look here.", readme)
-        self.assertIn("residual producer is intentionally Python/API-only in this lane", readme)
+        self.assertIn("axm-machine-voice/residual-snapshot/0.1", readme)
+        self.assertIn("examples/residual_snapshot.example.json", readme)
+        self.assertIn(
+            "cause or novelty merely because an expected-vs-observed residual exceeds a supplied tolerance",
+            readme,
+        )
+
+        look_start = readme.index("### `Look here.`")
+        transport_start = readme.index("## Versioned state snapshot handoff", look_start)
+        look_section = readme[look_start:transport_start]
+        self.assertNotIn("Python/API-only in this lane", look_section)
 
 
 if __name__ == "__main__":
