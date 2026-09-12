@@ -22,13 +22,23 @@ class MonolithNativeContractTests(unittest.TestCase):
     def test_manifest_declares_state_native_handoff_for_monolith(self):
         adapter = self.capabilities["adapter.state-snapshot"]
         state_talk = self.capabilities["communication.state-talk"]
-        producer = self.capabilities["producer.lower-cost-alternative"]
+        alternative = self.capabilities["producer.lower-cost-alternative"]
+        conflict = self.capabilities["producer.exact-conflict"]
 
         self.assertIn("state.snapshot", adapter["accepts"])
         self.assertIn("state.context", adapter["accepts"])
         self.assertIn("communication.state-talk", state_talk["provides"])
-        self.assertIn("transition.proposal", producer["provides"])
-        self.assertIn("state.constraint", producer["accepts"])
+        self.assertIn("transition.proposal", alternative["provides"])
+        self.assertIn("state.constraint", alternative["accepts"])
+        self.assertIn("state.conflict", conflict["provides"])
+        self.assertIn("state.assertion", conflict["accepts"])
+        self.assertIn("evidence", conflict["accepts"])
+
+    def test_conflict_capability_does_not_claim_conflict_resolution(self):
+        conflict = self.capabilities["producer.exact-conflict"]
+        self.assertIn("does not decide which assertion is true", conflict["description"])
+        not_claimed = self.manifest["truth_boundary"]["not_claimed"]
+        self.assertIn("resolution of which side of a surfaced conflict is true", not_claimed)
 
     def test_floorvoice_is_declared_as_local_communication_not_audio(self):
         floorvoice = self.capabilities["interface.floorvoice"]
