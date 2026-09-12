@@ -47,9 +47,9 @@ from .snapshot import (
     process_need_snapshot,
     process_outcome_snapshot,
     process_residual_snapshot,
-    process_snapshot,
     process_unresolved_snapshot,
 )
+from .snapshot_router import HISTORY_SNAPSHOT_SCHEMA, process_history_snapshot, process_snapshot
 from .unresolved import AttemptState, produce_bounded_unresolved
 
 __all__ = [
@@ -66,6 +66,7 @@ __all__ = [
     "FLOORVOICE",
     "GateContext",
     "GateDecision",
+    "HISTORY_SNAPSHOT_SCHEMA",
     "HistoricalPattern",
     "HistoryScope",
     "JOURNAL_PROTOCOL",
@@ -94,6 +95,7 @@ __all__ = [
     "packet_dict",
     "process_alternative_snapshot",
     "process_conflict_snapshot",
+    "process_history_snapshot",
     "process_need_snapshot",
     "process_outcome_snapshot",
     "process_residual_snapshot",
