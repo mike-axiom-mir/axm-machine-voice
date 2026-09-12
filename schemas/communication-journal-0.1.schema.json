@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "communication-journal-0.1.schema.json",
+  "title": "AXM Machine Voice Communication Journal Record v0.1",
+  "oneOf": [
+    {"$ref": "#/$defs/emission"},
+    {"$ref": "#/$defs/response"}
+  ],
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "id": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "previous_hash": {
+      "oneOf": [
+        {"type": "string", "minLength": 1},
+        {"type": "null"}
+      ]
+    },
+    "emission": {
+      "type": "object",
+      "required": ["protocol", "sequence", "previous_hash", "type", "packet", "record_hash"],
+      "properties": {
+        "protocol": {"const": "axm-machine-voice/communication-journal/0.1"},
+        "sequence": {"type": "integer", "minimum": 1},
+        "previous_hash": {"$ref": "#/$defs/previous_hash"},
+        "type": {"const": "emission"},
+        "packet": {"$ref": "statetalk-packet-0.1.schema.json"},
+        "record_hash": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "response": {
+      "type": "object",
+      "required": ["protocol", "sequence", "previous_hash", "type", "event_id", "actor", "action", "targets", "record_hash"],
+      "properties": {
+        "protocol": {"const": "axm-machine-voice/communication-journal/0.1"},
+        "sequence": {"type": "integer", "minimum": 1},
+        "previous_hash": {"$ref": "#/$defs/previous_hash"},
+        "type": {"const": "response"},
+        "event_id": {"type": "string", "minLength": 1},
+        "actor": {"$ref": "#/$defs/ref"},
+        "action": {"type": "string", "minLength": 1},
+        "targets": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/ref"}
+        },
+        "record_hash": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    }
+  }
+}
