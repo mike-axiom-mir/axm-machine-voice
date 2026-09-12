@@ -32,11 +32,13 @@ from .snapshot import (
     ALTERNATIVE_SNAPSHOT_SCHEMA,
     CONFLICT_SNAPSHOT_SCHEMA,
     SNAPSHOT_SCHEMA,
+    UNRESOLVED_SNAPSHOT_SCHEMA,
     SnapshotOutcome,
     outcome_dict,
     process_alternative_snapshot,
     process_conflict_snapshot,
     process_snapshot,
+    process_unresolved_snapshot,
 )
 from .unresolved import AttemptState, produce_bounded_unresolved
 
@@ -61,6 +63,7 @@ __all__ = [
     "SNAPSHOT_SCHEMA",
     "SnapshotOutcome",
     "StateTalkPacket",
+    "UNRESOLVED_SNAPSHOT_SCHEMA",
     "append_emission",
     "append_response",
     "canonical_json",
@@ -73,6 +76,7 @@ __all__ = [
     "process_alternative_snapshot",
     "process_conflict_snapshot",
     "process_snapshot",
+    "process_unresolved_snapshot",
     "produce_bounded_unresolved",
     "produce_exact_conflict",
     "produce_lower_cost_alternative",
