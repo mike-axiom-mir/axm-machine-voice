@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "local-bridge-0.1.schema.json",
+  "title": "AXM Machine Voice Local Bridge v0.1",
+  "oneOf": [
+    {"$ref": "#/$defs/ready"},
+    {"$ref": "#/$defs/packet_rendered"},
+    {"$ref": "#/$defs/response_action"},
+    {"$ref": "#/$defs/load_packet"},
+    {"$ref": "#/$defs/response_status"}
+  ],
+  "$defs": {
+    "ready": {
+      "type": "object",
+      "required": ["protocol", "type", "version"],
+      "properties": {
+        "protocol": {"const": "axm-machine-voice/local-bridge/0.1"},
+        "type": {"const": "ready"},
+        "version": {"const": "0.1"}
+      },
+      "additionalProperties": false
+    },
+    "packet_rendered": {
+      "type": "object",
+      "required": ["protocol", "type", "event_id"],
+      "properties": {
+        "protocol": {"const": "axm-machine-voice/local-bridge/0.1"},
+        "type": {"const": "packet-rendered"},
+        "event_id": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "null"}
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "response_action": {
+      "type": "object",
+      "required": ["protocol", "type", "response_id", "event_id", "action", "targets"],
+      "properties": {
+        "protocol": {"const": "axm-machine-voice/local-bridge/0.1"},
+        "type": {"const": "response-action"},
+        "response_id": {"type": "string", "minLength": 1},
+        "event_id": {"type": "string", "minLength": 1},
+        "action": {"enum": ["inspect", "compare", "acknowledge"]},
+        "targets": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/ref"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "load_packet": {
+      "type": "object",
+      "required": ["protocol", "type", "packet"],
+      "properties": {
+        "protocol": {"const": "axm-machine-voice/local-bridge/0.1"},
+        "type": {"const": "load-packet"},
+        "packet": {"$ref": "statetalk-packet-0.1.schema.json"}
+      },
+      "additionalProperties": false
+    },
+    "response_status": {
+      "type": "object",
+      "required": ["protocol", "type", "response_id", "event_id", "action", "status"],
+      "properties": {
+        "protocol": {"const": "axm-machine-voice/local-bridge/0.1"},
+        "type": {"const": "response-status"},
+        "response_id": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "null"}
+          ]
+        },
+        "event_id": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "null"}
+          ]
+        },
+        "action": {
+          "oneOf": [
+            {"enum": ["inspect", "compare", "acknowledge"]},
+            {"type": "null"}
+          ]
+        },
+        "status": {"enum": ["received", "recorded", "rejected"]}
+      },
+      "additionalProperties": false
+    },
+    "ref": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "id": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    }
+  }
+}
