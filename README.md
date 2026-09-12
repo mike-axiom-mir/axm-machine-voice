@@ -45,7 +45,7 @@ Run all tests with:
 python -m unittest discover -s tests -v
 ```
 
-## Four grounded reasons to speak
+## Five grounded reasons to speak
 
 ### `There is another way.`
 
@@ -118,11 +118,39 @@ python examples/run_need_producer.py
 
 See [`docs/NEED_PRODUCER.md`](docs/NEED_PRODUCER.md).
 
+### `Look here.`
+
+`produce_residual_look(...)` can surface only when an explicitly supplied observed numeric value differs from an explicitly supplied expected numeric value by **more than** an explicitly supplied non-negative tolerance under an explicitly named metric.
+
+Each check carries separate evidence for the expectation, observation, and tolerance.
+
+A surfaced claim explicitly refuses to infer an explanation:
+
+```json
+{
+  "cause": null,
+  "cause_claimed": false,
+  "novelty_claimed": false,
+  "model_invalidity_claimed": false,
+  "observation_invalidity_claimed": false
+}
+```
+
+Exactly at tolerance stays silent. Adding unrelated checks that remain inside tolerance does not create new speech.
+
+```bash
+python examples/run_residual_producer.py
+```
+
+See [`docs/RESIDUAL_LOOK_PRODUCER.md`](docs/RESIDUAL_LOOK_PRODUCER.md).
+
+The residual producer is intentionally Python/API-only in this lane. A strict residual snapshot schema should be added only after this producer independently survives review and CI.
+
 All bundled producer examples use synthetic state and are not live Machine Floor discoveries.
 
 ## Versioned state snapshot handoff
 
-All four producers now use one strict schema-id-routed snapshot transport:
+The first four producers use one strict schema-id-routed snapshot transport:
 
 ```text
 axm-machine-voice/alternative-snapshot/0.1
@@ -204,7 +232,7 @@ See [`docs/LOCAL_MONOLITH_TEST.md`](docs/LOCAL_MONOLITH_TEST.md).
 
 `AXM_MODULE.json` declares Machine Voice natively so `axm-monolith` does not have to guess from the repository name.
 
-Declared capabilities include StateTalk, the strict state-snapshot adapter, the deterministic producers, FloorVoice, the communication journal, and the machine JSON interface.
+Declared capabilities include StateTalk, the strict state-snapshot adapter, deterministic producers, FloorVoice, the communication journal, and the machine JSON interface.
 
 Native declaration is stronger than heuristic discovery but is still **not** cross-module runtime verification.
 
@@ -220,6 +248,8 @@ Machine Voice does not currently claim:
 - which side of a surfaced conflict is true;
 - global impossibility from a bounded unresolved search;
 - global unavailability from a bounded missing-input inventory;
+- cause or novelty merely because an expected-vs-observed residual exceeds a supplied tolerance;
+- model invalidity or observation invalidity merely because a residual exceeds tolerance;
 - that a surfaced alternative is correct or canonical;
 - truth of externally supplied evidence merely because it renders;
 - actor authentication by the local page;
