@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "statetalk-packet-0.1.schema.json",
+  "title": "AXM Machine Voice StateTalk Packet v0.1",
+  "type": "object",
+  "required": [
+    "version",
+    "event_id",
+    "kind",
+    "source",
+    "subjects",
+    "claim",
+    "evidence",
+    "relevance",
+    "next_operations",
+    "fingerprint",
+    "proposal_map",
+    "metadata"
+  ],
+  "properties": {
+    "version": {"const": "0.1"},
+    "event_id": {"type": "string", "minLength": 1},
+    "kind": {
+      "enum": [
+        "notice",
+        "conflict",
+        "alternative",
+        "unresolved",
+        "need",
+        "repeat",
+        "novel",
+        "success",
+        "failure",
+        "look"
+      ]
+    },
+    "source": {"$ref": "#/$defs/ref"},
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/ref"}
+    },
+    "claim": {"$ref": "#/$defs/claim"},
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/ref"}
+    },
+    "relevance": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/ref"}
+    },
+    "next_operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "fingerprint": {"type": "string", "minLength": 1},
+    "proposal_map": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/proposal_map"}
+      ]
+    },
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "id": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "claim": {
+      "type": "object",
+      "required": ["predicate", "arguments", "value"],
+      "properties": {
+        "predicate": {"type": "string", "minLength": 1},
+        "arguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/ref"}
+        },
+        "value": true
+      },
+      "additionalProperties": false
+    },
+    "relation": {
+      "type": "object",
+      "required": ["source", "predicate", "target"],
+      "properties": {
+        "source": {"$ref": "#/$defs/ref"},
+        "predicate": {"type": "string", "minLength": 1},
+        "target": {"$ref": "#/$defs/ref"}
+      },
+      "additionalProperties": false
+    },
+    "proposal_map": {
+      "type": "object",
+      "required": ["nodes", "relations", "status"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/ref"}
+        },
+        "relations": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/relation"}
+        },
+        "status": {
+          "enum": [
+            "discovered",
+            "grounded",
+            "untested",
+            "testable",
+            "testing",
+            "supported",
+            "contradicted",
+            "rejected",
+            "adopted"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
