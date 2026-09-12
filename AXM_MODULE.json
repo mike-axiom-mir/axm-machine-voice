@@ -1,0 +1,162 @@
+{
+  "schema_version": "0.1",
+  "module": {
+    "name": "axm-machine-voice",
+    "purpose": "Grounded state-native communication between the AXM Machine Floor, machines/AIs, and a deliberately primitive local human surface."
+  },
+  "capabilities": [
+    {
+      "id": "communication.state-talk",
+      "description": "Canonical grounded StateTalk packets carry machine-readable claims, evidence, relevance, next operations, and optional proposal maps without generated explanatory prose.",
+      "provides": [
+        "communication.state-talk",
+        "communication.grounded",
+        "proposal.map"
+      ],
+      "accepts": [
+        "communication.candidate",
+        "evidence",
+        "state.context"
+      ],
+      "tags": [
+        "communication",
+        "state",
+        "machine-floor",
+        "evidence"
+      ],
+      "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
+    },
+    {
+      "id": "adapter.state-snapshot",
+      "description": "Strict versioned JSON adapter converts explicitly supplied state snapshots plus independently supplied active runtime context into a deterministic producer/gate outcome.",
+      "provides": [
+        "communication.candidate"
+      ],
+      "accepts": [
+        "state.snapshot",
+        "state.context"
+      ],
+      "tags": [
+        "adapter",
+        "state",
+        "contract"
+      ],
+      "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
+    },
+    {
+      "id": "producer.lower-cost-alternative",
+      "description": "Deterministic producer can surface a strictly lower-cost alternative only when an explicit metric, evidence, and all required preserved constraints are supplied.",
+      "provides": [
+        "transition.proposal",
+        "communication.candidate"
+      ],
+      "accepts": [
+        "state",
+        "state.constraint",
+        "evidence"
+      ],
+      "tags": [
+        "producer",
+        "state",
+        "deterministic",
+        "proposal"
+      ],
+      "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
+    },
+    {
+      "id": "interface.floorvoice",
+      "description": "Offline local FloorVoice renders a fixed tiny vocabulary from StateTalk kind and supports bounded Inspect, Compare, and Acknowledge response intents without inventing actor identity.",
+      "provides": [
+        "interface.local",
+        "interface.floorvoice",
+        "communication.response.intent"
+      ],
+      "accepts": [
+        "communication.state-talk"
+      ],
+      "tags": [
+        "interface",
+        "local",
+        "human",
+        "communication"
+      ],
+      "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
+    },
+    {
+      "id": "communication.journal",
+      "description": "Local append-only communication journal remembers emitted semantics, suppresses repeated speech, and records structured responses against unique emitted event ids with explicitly bounded integrity claims.",
+      "provides": [
+        "state.communication-history",
+        "evidence.communication-history"
+      ],
+      "accepts": [
+        "communication.state-talk",
+        "communication.response.intent"
+      ],
+      "tags": [
+        "communication",
+        "journal",
+        "continuity",
+        "evidence"
+      ],
+      "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
+    },
+    {
+      "id": "interface.machine-json",
+      "description": "Zero-install versioned machine JSON command channel returns canonical emitted, no-candidate, rejected, recorded, or invalid outcomes without human prose.",
+      "provides": [
+        "interface.machine-json",
+        "communication.state-talk"
+      ],
+      "accepts": [
+        "state.snapshot",
+        "state.context",
+        "communication.response.intent"
+      ],
+      "tags": [
+        "interface",
+        "machine",
+        "json",
+        "local"
+      ],
+      "evidence_status": "implemented_with_regression_tests_not_cross_module_verified"
+    }
+  ],
+  "entrypoints": [
+    {
+      "kind": "python-script",
+      "command": "axm-machine-voice",
+      "target": "axm_machine_voice.cli:main",
+      "purpose": "machine JSON channel"
+    },
+    {
+      "kind": "python-zero-install",
+      "command": "python machine_voice.py",
+      "path": "machine_voice.py",
+      "purpose": "repository-local machine JSON channel"
+    },
+    {
+      "kind": "browser-local",
+      "command": "open local/index.html",
+      "path": "local/index.html",
+      "purpose": "offline FloorVoice human surface"
+    }
+  ],
+  "tests": [
+    {
+      "kind": "unittest",
+      "command": "python -m unittest discover -s tests -v",
+      "scope": "core, producer, snapshot adapter, machine channel, communication journal, local bridge"
+    }
+  ],
+  "truth_boundary": {
+    "not_claimed": [
+      "consciousness or human-like intent",
+      "general autonomous idea discovery",
+      "truth of externally supplied evidence merely because a packet renders",
+      "cross-module interoperability before exact composition testing",
+      "actor authentication by the local FloorVoice renderer",
+      "cryptographic authenticity of the local unkeyed journal"
+    ]
+  }
+}
