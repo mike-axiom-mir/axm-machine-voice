@@ -7,6 +7,7 @@ from .conflict import AssertionState, produce_exact_conflict
 from .core import GateContext, GateDecision, Ref, StateTalkPacket, emit, evaluate, packet_dict
 from .need import AvailableInputState, produce_bounded_need
 from .producer import OptionState, produce_lower_cost_alternative
+from .residual import ResidualCheck, produce_residual_look
 from .unresolved import AttemptState, produce_bounded_unresolved
 
 
@@ -14,6 +15,7 @@ ALTERNATIVE_SNAPSHOT_SCHEMA = "axm-machine-voice/alternative-snapshot/0.1"
 CONFLICT_SNAPSHOT_SCHEMA = "axm-machine-voice/conflict-snapshot/0.1"
 UNRESOLVED_SNAPSHOT_SCHEMA = "axm-machine-voice/unresolved-snapshot/0.1"
 NEED_SNAPSHOT_SCHEMA = "axm-machine-voice/need-snapshot/0.1"
+RESIDUAL_SNAPSHOT_SCHEMA = "axm-machine-voice/residual-snapshot/0.1"
 # Backwards-compatible name used by the original alternative-snapshot API/tests.
 SNAPSHOT_SCHEMA = ALTERNATIVE_SNAPSHOT_SCHEMA
 
@@ -106,6 +108,38 @@ def _available_input(value: Any, path: str) -> AvailableInputState:
     return AvailableInputState(
         ref=_ref(obj["ref"], f"{path}.ref"),
         evidence=_refs(obj["evidence"], f"{path}.evidence"),
+    )
+
+
+def _residual_check(value: Any, path: str) -> ResidualCheck:
+    obj = _mapping(value, path)
+    _exact_keys(
+        obj,
+        {
+            "ref",
+            "subject",
+            "property",
+            "metric",
+            "expected",
+            "observed",
+            "tolerance",
+            "expected_evidence",
+            "observed_evidence",
+            "tolerance_evidence",
+        },
+        path,
+    )
+    return ResidualCheck(
+        ref=_ref(obj["ref"], f"{path}.ref"),
+        subject=_ref(obj["subject"], f"{path}.subject"),
+        property=_ref(obj["property"], f"{path}.property"),
+        metric=_ref(obj["metric"], f"{path}.metric"),
+        expected=_number(obj["expected"], f"{path}.expected"),
+        observed=_number(obj["observed"], f"{path}.observed"),
+        tolerance=_number(obj["tolerance"], f"{path}.tolerance"),
+        expected_evidence=_refs(obj["expected_evidence"], f"{path}.expected_evidence"),
+        observed_evidence=_refs(obj["observed_evidence"], f"{path}.observed_evidence"),
+        tolerance_evidence=_refs(obj["tolerance_evidence"], f"{path}.tolerance_evidence"),
     )
 
 
@@ -377,6 +411,63 @@ def process_need_snapshot(
     )
 
 
+def process_residual_snapshot(
+    snapshot: Mapping[str, Any],
+    *,
+    active_refs: tuple[Ref, ...],
+    seen_fingerprints: frozenset[str] = frozenset(),
+) -> SnapshotOutcome:
+    """Validate one residual snapshot and run it through producer + gate.
+
+    The snapshot supplies exact expected/observed/tolerance comparisons and evidence. It
+    cannot certify its own relevance or infer the cause/meaning of an exceeded residual.
+    """
+
+    _require_active_refs(active_refs)
+    obj = _mapping(snapshot, "snapshot")
+    expected = {
+        "schema",
+        "event_id",
+        "source",
+        "activity",
+        "checks",
+        "next_operations",
+    }
+    _exact_keys(obj, expected, "snapshot")
+
+    schema = _text(obj["schema"], "snapshot.schema")
+    if schema != RESIDUAL_SNAPSHOT_SCHEMA:
+        raise ValueError(f"Unsupported snapshot schema: {schema}")
+
+    checks_raw = obj["checks"]
+    if not isinstance(checks_raw, list):
+        raise ValueError("snapshot.checks must be an array")
+
+    source = _ref(obj["source"], "snapshot.source")
+    declared_activity = _ref(obj["activity"], "snapshot.activity")
+    candidate = produce_residual_look(
+        event_id=_text(obj["event_id"], "snapshot.event_id"),
+        source=source,
+        activity=declared_activity,
+        checks=tuple(
+            _residual_check(item, f"snapshot.checks[{index}]")
+            for index, item in enumerate(checks_raw)
+        ),
+        next_operations=_operations(obj["next_operations"], "snapshot.next_operations"),
+    )
+
+    if candidate is None:
+        return SnapshotOutcome(
+            status="no_candidate",
+            reasons=("no_residual_exceeds_supplied_tolerance",),
+        )
+    return _gate_candidate(
+        candidate,
+        active_refs=active_refs,
+        seen_fingerprints=seen_fingerprints,
+    )
+
+
 def process_snapshot(
     snapshot: Mapping[str, Any],
     *,
@@ -407,6 +498,12 @@ def process_snapshot(
         )
     if schema == NEED_SNAPSHOT_SCHEMA:
         return process_need_snapshot(
+            obj,
+            active_refs=active_refs,
+            seen_fingerprints=seen_fingerprints,
+        )
+    if schema == RESIDUAL_SNAPSHOT_SCHEMA:
+        return process_residual_snapshot(
             obj,
             active_refs=active_refs,
             seen_fingerprints=seen_fingerprints,

@@ -1,0 +1,57 @@
+{
+  "schema": "axm-machine-voice/residual-snapshot/0.1",
+  "event_id": "residual-snapshot-example-001",
+  "source": {
+    "kind": "machine-floor",
+    "id": "residual-snapshot-example"
+  },
+  "activity": {
+    "kind": "activity",
+    "id": "local-monolith-proof"
+  },
+  "checks": [
+    {
+      "ref": {
+        "kind": "residual-check",
+        "id": "probe-position"
+      },
+      "subject": {
+        "kind": "state",
+        "id": "probe-1"
+      },
+      "property": {
+        "kind": "property",
+        "id": "position-error"
+      },
+      "metric": {
+        "kind": "metric",
+        "id": "meters"
+      },
+      "expected": 10.0,
+      "observed": 12.0,
+      "tolerance": 0.5,
+      "expected_evidence": [
+        {
+          "kind": "evidence",
+          "id": "predicted-position"
+        }
+      ],
+      "observed_evidence": [
+        {
+          "kind": "evidence",
+          "id": "measured-position"
+        }
+      ],
+      "tolerance_evidence": [
+        {
+          "kind": "evidence",
+          "id": "position-tolerance-policy"
+        }
+      ]
+    }
+  ],
+  "next_operations": [
+    "inspect",
+    "compare"
+  ]
+}
