@@ -139,6 +139,8 @@ partial all-positive evidence          → no_candidate silence
 
 The success/failure meaning remains bounded to the supplied contract. Transport does not authenticate who authored the contract, whether it was modified later, or whether it truly existed before the attempt.
 
+A success packet explicitly denies **global success** (`global_success_claimed: false`). A failure packet explicitly denies **global failure** (`global_failure_claimed: false`). Both preserve the criteria-contract authorship and pre-attempt timing limitations instead of upgrading a contract-relative outcome into a universal judgment.
+
 ## History repeat / novelty snapshot
 
 Protocol:
