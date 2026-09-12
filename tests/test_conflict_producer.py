@@ -25,13 +25,15 @@ class ExactConflictProducerTests(unittest.TestCase):
         self.prop = Ref("property", "open")
 
     def assertion(self, name: str, value, *, scope=None, subject=None, prop=None, evidence=None):
+        if evidence is None:
+            evidence = (Ref("evidence", f"{name}-proof"),)
         return AssertionState(
             ref=Ref("assertion", name),
             scope=scope or self.scope,
             subject=subject or self.subject,
             property=prop or self.prop,
             value=value,
-            evidence=tuple(evidence or (Ref("evidence", f"{name}-proof"),)),
+            evidence=tuple(evidence),
         )
 
     def produce(self, assertions):
