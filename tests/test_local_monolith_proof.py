@@ -31,6 +31,15 @@ class LocalMonolithProofTests(unittest.TestCase):
         send_at = html.index('type: "load-packet"')
         self.assertLess(ready_at, send_at)
 
+    def test_harness_receives_primitive_response_without_claiming_journal_persistence(self):
+        html = build_html()
+        self.assertIn('message.type === "response-action"', html)
+        self.assertIn('type: "response-status"', html)
+        self.assertIn('status: "received"', html)
+        self.assertIn("proof only, not journaled", html)
+        self.assertIn("event mismatch", html)
+        self.assertNotIn("human:local-user", html)
+
     def test_inline_packet_is_canonical_producer_output_not_bundled_renderer_demo(self):
         html = build_html()
         self.assertIn('"producer":"lower-cost-alternative/0.2"', html)
