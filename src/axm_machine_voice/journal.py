@@ -54,9 +54,13 @@ def _validate_record(record: Mapping[str, Any], *, expected_sequence: int, previ
     _exact_keys(record, expected, f"journal[{expected_sequence}]")
     if record["protocol"] != JOURNAL_PROTOCOL:
         raise ValueError(f"journal record uses unsupported protocol: {record['protocol']!r}")
-    if record["sequence"] != expected_sequence:
+
+    sequence = record["sequence"]
+    if isinstance(sequence, bool) or not isinstance(sequence, int):
+        raise ValueError(f"journal sequence must be an integer at sequence {expected_sequence}")
+    if sequence != expected_sequence:
         raise ValueError(
-            f"journal sequence mismatch: expected {expected_sequence}, got {record['sequence']!r}"
+            f"journal sequence mismatch: expected {expected_sequence}, got {sequence!r}"
         )
     if record["previous_hash"] != previous_hash:
         raise ValueError(f"journal previous_hash mismatch at sequence {expected_sequence}")
@@ -110,6 +114,14 @@ def read_journal(path: str | Path) -> tuple[dict[str, Any], ...]:
             _validate_record(record, expected_sequence=line_number, previous_hash=previous_hash)
             records.append(record)
             previous_hash = record["record_hash"]
+
+    event_ids = [
+        record["packet"]["event_id"]
+        for record in records
+        if record["type"] == "emission"
+    ]
+    if len(event_ids) != len(set(event_ids)):
+        raise ValueError("journal contains duplicate emitted event_id values")
     return tuple(records)
 
 
@@ -153,11 +165,13 @@ def append_emission(path: str | Path, packet: StateTalkPacket) -> dict[str, Any]
     """Append one communication that actually passed the gate.
 
     Rejected candidates and normal silence are intentionally not journaled as speech.
+    Event ids are unique within one journal so a later response cannot be ambiguous.
     """
 
-    seen = emitted_fingerprints(path)
-    if packet.fingerprint in seen:
+    if packet.fingerprint in emitted_fingerprints(path):
         raise ValueError("journal already contains this emitted semantic fingerprint")
+    if packet.event_id in emitted_event_ids(path):
+        raise ValueError("journal already contains this emitted event_id")
     return _append_payload(path, {"type": "emission", "packet": packet_dict(packet)})
 
 
