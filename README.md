@@ -179,7 +179,7 @@ python examples/run_outcome_producer.py
 
 See [`docs/OUTCOME_PRODUCER.md`](docs/OUTCOME_PRODUCER.md).
 
-Both outcome states now also use the strict shared snapshot transport. The transport carries an explicit attempt, criteria contract, required criteria, grounded observations, and evidence; it does not authenticate who authored the contract or whether it truly existed before the attempt.
+Both outcome states also use the strict shared snapshot transport. The transport carries an explicit attempt, criteria contract, required criteria, grounded observations, and evidence; it does not authenticate who authored the contract or whether it truly existed before the attempt.
 
 ### `This happened before.` / `This is new.`
 
@@ -210,13 +210,13 @@ python examples/run_history_producer.py
 
 See [`docs/HISTORY_PRODUCER.md`](docs/HISTORY_PRODUCER.md).
 
-The history producer is intentionally Python/API-only in this lane. A strict history snapshot schema should be added only after this paired producer independently survives review and CI.
+Both history states now also use the strict shared snapshot transport. The same `history-snapshot/0.1` schema carries current pattern, bounded history scope, historical entries, and evidence; transport cannot authenticate completeness or chronological ordering.
 
 All bundled producer examples use synthetic state and are not live Machine Floor discoveries.
 
 ## Versioned state snapshot handoff
 
-All six currently transported deterministic producers use one strict schema-id-routed snapshot transport:
+All seven deterministic producers use one strict schema-id-routed snapshot transport:
 
 ```text
 axm-machine-voice/alternative-snapshot/0.1
@@ -225,6 +225,7 @@ axm-machine-voice/unresolved-snapshot/0.1
 axm-machine-voice/need-snapshot/0.1
 axm-machine-voice/residual-snapshot/0.1
 axm-machine-voice/outcome-snapshot/0.1
+axm-machine-voice/history-snapshot/0.1
 ```
 
 Examples:
@@ -237,11 +238,15 @@ examples/need_snapshot.example.json
 examples/residual_snapshot.example.json
 examples/outcome_snapshot.example.json
 examples/outcome_failure_snapshot.example.json
+examples/history_snapshot.example.json
+examples/history_novel_snapshot.example.json
 ```
 
 The caller supplies active runtime context separately. A snapshot cannot certify its own relevance.
 
 Unknown schema ids or unknown fields fail closed rather than being guessed or silently dropped.
+
+History support is additive: the package/CLI use a thin history-aware wrapper, while the prior six schemas still delegate unchanged to the earlier proven router.
 
 See [`docs/STATE_SNAPSHOT.md`](docs/STATE_SNAPSHOT.md) and the portable schemas under [`schemas/`](schemas/).
 
@@ -250,7 +255,7 @@ See [`docs/STATE_SNAPSHOT.md`](docs/STATE_SNAPSHOT.md) and the portable schemas 
 One zero-install command accepts every supported snapshot schema:
 
 ```bash
-python machine_voice.py snapshot examples/outcome_snapshot.example.json \
+python machine_voice.py snapshot examples/history_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
@@ -274,7 +279,7 @@ The journal supplies prior semantic fingerprints so repeated grounded state does
 
 The journal is hash-linked for local integrity checking, not cryptographic proof against a writer who can rewrite and re-hash the whole file. Actor references are structured claims, not authenticated identities.
 
-The new history producer does not assume this journal is the only valid history provider. Other bounded evidence-backed history stores may feed the same history contract later.
+The history producer does not assume this journal is the only valid history provider. Other bounded evidence-backed history stores may feed the same history contract.
 
 See [`docs/COMMUNICATION_JOURNAL.md`](docs/COMMUNICATION_JOURNAL.md).
 
