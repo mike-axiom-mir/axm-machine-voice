@@ -8,7 +8,7 @@ from typing import Any, Mapping, Sequence
 
 from .core import Ref, canonical_json
 from .journal import append_emission, append_response, emitted_fingerprints
-from .snapshot import outcome_dict, process_alternative_snapshot
+from .snapshot import outcome_dict, process_snapshot
 
 
 MACHINE_CHANNEL_PROTOCOL = "axm-machine-voice/machine-channel/0.1"
@@ -51,7 +51,7 @@ def _parser() -> MachineArgumentParser:
 
     snapshot = subparsers.add_parser(
         "snapshot",
-        help="Process one versioned alternative snapshot and emit one JSON outcome.",
+        help="Process one supported versioned Machine Voice snapshot and emit one JSON outcome.",
     )
     snapshot.add_argument(
         "source",
@@ -122,7 +122,7 @@ def _snapshot_result(args: argparse.Namespace) -> dict[str, Any]:
         seen.update(emitted_fingerprints(args.journal))
 
     snapshot = _read_snapshot(args.source)
-    outcome = process_alternative_snapshot(
+    outcome = process_snapshot(
         snapshot,
         active_refs=active_refs,
         seen_fingerprints=frozenset(seen),
