@@ -47,7 +47,7 @@ full structure              tiny fixed phrase
 
 A state change is not automatically communication. A diagnostic log is not automatically the Machine Floor "speaking".
 
-## v0.1
+## v0.1 core
 
 The first working slice is deliberately small and standard-library-only:
 
@@ -67,6 +67,35 @@ Run the tests with:
 ```bash
 python -m unittest discover -s tests -v
 ```
+
+## Offline local test surface
+
+The repository now includes a zero-dependency local test page:
+
+```text
+local/index.html
+```
+
+Open it directly in a browser. It requires no AI, network, account, cloud service, package install, server, or build step.
+
+The page starts with an explicitly labeled bundled **demo** packet. The demo proves the rendering path only; it is not presented as a live Machine Floor discovery. A local JSON StateTalk packet can also be opened through the page and inspected as:
+
+- fixed FloorVoice phrase;
+- source and event identity;
+- subjects and evidence references;
+- claim predicate and next operations;
+- Proposal Map relations and status;
+- complete raw packet.
+
+The integration manifest is [`local/manifest.json`](local/manifest.json). The monolith bridge contract is documented in [`docs/LOCAL_MONOLITH_TEST.md`](docs/LOCAL_MONOLITH_TEST.md).
+
+A monolith shell can embed the page and send canonical packets through the small `postMessage` bridge identified by:
+
+```text
+axm-machine-voice/local-bridge/0.1
+```
+
+The renderer remains downstream of the core truth boundary: **rendering a packet does not prove its claim, adopt its proposal, or make it canonical.**
 
 ## FloorVoice v0.1
 
@@ -101,9 +130,22 @@ No proposal becomes canon because it was surfaced.
 - generate explanatory prose;
 - grant the Machine Floor merge authority;
 - decide that a surfaced proposal is correct;
-- execute arbitrary proposal contents.
+- execute arbitrary proposal contents;
+- claim the bundled local demo is a live discovery.
 
 Those boundaries are intentional. Discovery producers and richer state capabilities can be connected later without changing the truth boundary.
+
+## Next proof target
+
+The next meaningful milestone is not a more impressive phrase. It is a real deterministic producer feeding one grounded packet into the same local surface used by the monolith test.
+
+A small conflict, alternative, repeated state relationship, or unresolved condition with inspectable evidence is preferable to a complicated demonstration. The experiment should first prove that real machine-state structure can travel through:
+
+```text
+producer -> Candidate -> communication gate -> StateTalk packet -> local/monolith renderer
+```
+
+without adding invented meaning along the way.
 
 ## Why keep the reference space open?
 
