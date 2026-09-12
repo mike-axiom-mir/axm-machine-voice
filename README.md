@@ -45,7 +45,7 @@ Run all tests with:
 python -m unittest discover -s tests -v
 ```
 
-## Seven grounded reasons to speak
+## Nine grounded reasons to speak
 
 ### `There is another way.`
 
@@ -181,11 +181,42 @@ See [`docs/OUTCOME_PRODUCER.md`](docs/OUTCOME_PRODUCER.md).
 
 Both outcome states now also use the strict shared snapshot transport. The transport carries an explicit attempt, criteria contract, required criteria, grounded observations, and evidence; it does not authenticate who authored the contract or whether it truly existed before the attempt.
 
+### `This happened before.` / `This is new.`
+
+`produce_history_classification(...)` is one paired producer so recurrence and novelty share the same exact pattern definition and explicit comparison domain.
+
+A grounded exact prior match can surface `This happened before.` even when the supplied history is incomplete.
+
+`This is new.` has a stronger burden: no exact match **and** an explicit `complete_for_domain = true` history scope. No match in incomplete history stays silent.
+
+Bounded novelty explicitly records:
+
+```json
+{
+  "history_scope_complete_for_domain_claimed": true,
+  "history_scope_completeness_authenticated": false,
+  "history_ordering_authenticated": false,
+  "global_novelty_claimed": false,
+  "scientific_novelty_claimed": false,
+  "outside_scope_novelty_claimed": false
+}
+```
+
+So `This is new.` means only that no exact equivalent exists in the supplied history scope that is explicitly claimed complete for that pattern domain. It does not mean the pattern is globally or scientifically novel.
+
+```bash
+python examples/run_history_producer.py
+```
+
+See [`docs/HISTORY_PRODUCER.md`](docs/HISTORY_PRODUCER.md).
+
+The history producer is intentionally Python/API-only in this lane. A strict history snapshot schema should be added only after this paired producer independently survives review and CI.
+
 All bundled producer examples use synthetic state and are not live Machine Floor discoveries.
 
 ## Versioned state snapshot handoff
 
-All six deterministic producers use one strict schema-id-routed snapshot transport:
+All six currently transported deterministic producers use one strict schema-id-routed snapshot transport:
 
 ```text
 axm-machine-voice/alternative-snapshot/0.1
@@ -243,6 +274,8 @@ The journal supplies prior semantic fingerprints so repeated grounded state does
 
 The journal is hash-linked for local integrity checking, not cryptographic proof against a writer who can rewrite and re-hash the whole file. Actor references are structured claims, not authenticated identities.
 
+The new history producer does not assume this journal is the only valid history provider. Other bounded evidence-backed history stores may feed the same history contract later.
+
 See [`docs/COMMUNICATION_JOURNAL.md`](docs/COMMUNICATION_JOURNAL.md).
 
 ## Offline human surface
@@ -292,6 +325,8 @@ Machine Voice does not currently claim:
 - model invalidity or observation invalidity merely because a residual exceeds tolerance;
 - global success or global failure from evaluation against one explicit criteria contract;
 - authenticity, authorship, or pre-attempt timing of a supplied success criteria contract;
+- global or scientific novelty from absence in one supplied history scope;
+- authenticated completeness or chronological ordering of a supplied history scope;
 - that a surfaced alternative is correct or canonical;
 - truth of externally supplied evidence merely because it renders;
 - actor authentication by the local page;
