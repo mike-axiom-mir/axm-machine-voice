@@ -1,0 +1,72 @@
+{
+  "schema": "axm-machine-voice/unresolved-snapshot/0.1",
+  "event_id": "unresolved-snapshot-example-001",
+  "source": {
+    "kind": "machine-floor",
+    "id": "unresolved-snapshot-example"
+  },
+  "activity": {
+    "kind": "activity",
+    "id": "local-monolith-proof"
+  },
+  "problem": {
+    "kind": "problem",
+    "id": "candidate-route"
+  },
+  "search_scope": {
+    "kind": "search-scope",
+    "id": "synthetic-run-01"
+  },
+  "required_constraints": [
+    {
+      "kind": "constraint",
+      "id": "offline-only"
+    },
+    {
+      "kind": "constraint",
+      "id": "output-preserved"
+    }
+  ],
+  "attempts": [
+    {
+      "ref": {
+        "kind": "attempt",
+        "id": "path-a"
+      },
+      "preserves": [
+        {
+          "kind": "constraint",
+          "id": "offline-only"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "evidence",
+          "id": "path-a-check"
+        }
+      ]
+    },
+    {
+      "ref": {
+        "kind": "attempt",
+        "id": "path-b"
+      },
+      "preserves": [
+        {
+          "kind": "constraint",
+          "id": "output-preserved"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "evidence",
+          "id": "path-b-check"
+        }
+      ]
+    }
+  ],
+  "next_operations": [
+    "inspect",
+    "compare"
+  ]
+}
