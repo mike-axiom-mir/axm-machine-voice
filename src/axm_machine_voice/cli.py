@@ -13,6 +13,15 @@ from .snapshot import outcome_dict, process_alternative_snapshot
 MACHINE_CHANNEL_PROTOCOL = "axm-machine-voice/machine-channel/0.1"
 
 
+class MachineArgumentError(ValueError):
+    pass
+
+
+class MachineArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        raise MachineArgumentError(message)
+
+
 def parse_ref_key(value: str) -> Ref:
     kind, separator, identifier = value.partition(":")
     if not separator or not kind.strip() or not identifier.strip():
@@ -32,8 +41,8 @@ def _read_snapshot(source: str) -> Mapping[str, Any]:
     return value
 
 
-def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+def _parser() -> MachineArgumentParser:
+    parser = MachineArgumentParser(
         prog="axm-machine-voice",
         description="Machine-facing deterministic StateTalk interface.",
     )
@@ -78,14 +87,14 @@ def _invalid(error: Exception) -> dict[str, Any]:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
-    args = parser.parse_args(argv)
-
-    if args.command != "snapshot":  # argparse currently prevents this path.
-        parser.error(f"unsupported command: {args.command}")
 
     try:
+        args = parser.parse_args(argv)
+        if args.command != "snapshot":  # parser currently prevents this path.
+            raise MachineArgumentError(f"unsupported command: {args.command}")
         if not args.active_ref:
             raise ValueError("snapshot command requires at least one --active-ref")
+
         active_refs = tuple(parse_ref_key(value) for value in args.active_ref)
         if any(not value.strip() for value in args.seen_fingerprint):
             raise ValueError("--seen-fingerprint values must be non-empty")
