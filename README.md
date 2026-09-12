@@ -45,7 +45,39 @@ Run all tests with:
 python -m unittest discover -s tests -v
 ```
 
-## Nine grounded reasons to speak
+## Ten grounded reasons to speak
+
+### `I noticed something.`
+
+`produce_grounded_notice(...)` is deliberately narrower than the phrase sounds. It is a generic grounded-detector handoff: an explicitly named deterministic notice rule must explicitly fire on an explicitly referenced observation with separate observation, rule-definition, and trigger-result evidence.
+
+If the supplied rule did not fire, the producer stays silent.
+
+A notice packet explicitly refuses to invent interpretation:
+
+```json
+{
+  "cause": null,
+  "cause_claimed": false,
+  "importance_claimed": false,
+  "anomaly_claimed": false,
+  "novelty_claimed": false,
+  "success_claimed": false,
+  "failure_claimed": false,
+  "recommendation_claimed": false,
+  "interpretation_claimed": false
+}
+```
+
+So `I noticed something.` never means “the Floor has a feeling.” When a narrower grounded producer applies, that specific phrase should be preferred.
+
+```bash
+python examples/run_notice_producer.py
+```
+
+See [`docs/NOTICE_PRODUCER.md`](docs/NOTICE_PRODUCER.md).
+
+The notice producer is intentionally Python/API-only in this lane. A strict notice snapshot schema should be added only after this producer independently survives review and CI.
 
 ### `There is another way.`
 
@@ -216,7 +248,7 @@ All bundled producer examples use synthetic state and are not live Machine Floor
 
 ## Versioned state snapshot handoff
 
-All seven deterministic producers use one strict schema-id-routed snapshot transport:
+Seven of the eight deterministic producers currently use one strict schema-id-routed snapshot transport. Grounded notice is deliberately producer-only until its independent review passes.
 
 ```text
 axm-machine-voice/alternative-snapshot/0.1
@@ -332,6 +364,7 @@ Machine Voice does not currently claim:
 - authenticity, authorship, or pre-attempt timing of a supplied success criteria contract;
 - global or scientific novelty from absence in one supplied history scope;
 - authenticated completeness or chronological ordering of a supplied history scope;
+- importance, anomaly, novelty, cause, success, failure, recommendation, or interpretation merely because a generic notice rule fired;
 - that a surfaced alternative is correct or canonical;
 - truth of externally supplied evidence merely because it renders;
 - actor authentication by the local page;

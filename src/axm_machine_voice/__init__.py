@@ -29,6 +29,7 @@ from .journal import (
     read_journal,
 )
 from .need import AvailableInputState, produce_bounded_need
+from .notice import NoticeSignal, produce_grounded_notice
 from .outcome import CriterionObservation, produce_criterion_outcome
 from .producer import OptionState, produce_lower_cost_alternative
 from .residual import ResidualCheck, produce_residual_look
@@ -72,6 +73,7 @@ __all__ = [
     "JOURNAL_PROTOCOL",
     "JsonlEventLog",
     "NEED_SNAPSHOT_SCHEMA",
+    "NoticeSignal",
     "OUTCOME_SNAPSHOT_SCHEMA",
     "OptionState",
     "ProposalMap",
@@ -105,6 +107,7 @@ __all__ = [
     "produce_bounded_unresolved",
     "produce_criterion_outcome",
     "produce_exact_conflict",
+    "produce_grounded_notice",
     "produce_history_classification",
     "produce_lower_cost_alternative",
     "produce_residual_look",
