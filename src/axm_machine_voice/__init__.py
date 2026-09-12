@@ -27,6 +27,7 @@ from .journal import (
     emitted_fingerprints,
     read_journal,
 )
+from .need import AvailableInputState, produce_bounded_need
 from .producer import OptionState, produce_lower_cost_alternative
 from .snapshot import (
     ALTERNATIVE_SNAPSHOT_SCHEMA,
@@ -46,6 +47,7 @@ __all__ = [
     "ALTERNATIVE_SNAPSHOT_SCHEMA",
     "AssertionState",
     "AttemptState",
+    "AvailableInputState",
     "CONFLICT_SNAPSHOT_SCHEMA",
     "Candidate",
     "Claim",
@@ -77,6 +79,7 @@ __all__ = [
     "process_conflict_snapshot",
     "process_snapshot",
     "process_unresolved_snapshot",
+    "produce_bounded_need",
     "produce_bounded_unresolved",
     "produce_exact_conflict",
     "produce_lower_cost_alternative",
