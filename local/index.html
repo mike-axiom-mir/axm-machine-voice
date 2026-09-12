@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AXM Machine Voice — Local Test</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0a0d12;
+      color: #eef3f8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(75, 112, 156, .18), transparent 34rem),
+        radial-gradient(circle at 80% 0%, rgba(120, 92, 156, .15), transparent 30rem),
+        #0a0d12;
+    }
+    main { width: min(1200px, calc(100% - 28px)); margin: 0 auto; padding: 28px 0 48px; }
+    .topline { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+    .badge {
+      border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:7px 10px;
+      background:rgba(255,255,255,.045); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+    }
+    .badge.truth { border-color:rgba(121,201,160,.35); }
+    .badge.demo { border-color:rgba(255,196,99,.35); }
+    h1 { margin:0 0 8px; font-size:clamp(30px,5vw,56px); line-height:1; letter-spacing:-.04em; }
+    .subtitle { max-width:860px; margin:0 0 24px; color:#aeb9c5; font-size:16px; line-height:1.55; }
+    .grid { display:grid; grid-template-columns: 0.9fr 1.1fr; gap:16px; }
+    @media (max-width: 850px) { .grid { grid-template-columns:1fr; } }
+    .panel {
+      border:1px solid rgba(255,255,255,.1); border-radius:18px; background:rgba(12,17,24,.78);
+      box-shadow:0 18px 60px rgba(0,0,0,.28); overflow:hidden;
+    }
+    .panel-head { padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.08); color:#9eabb8; font-size:12px; letter-spacing:.09em; text-transform:uppercase; }
+    .panel-body { padding:18px; }
+    .voice {
+      min-height:230px; display:grid; place-items:center; text-align:center;
+      background:linear-gradient(180deg,rgba(255,255,255,.018),transparent);
+    }
+    .lamp {
+      width:76px; height:76px; margin:0 auto 20px; border-radius:50%;
+      border:1px solid rgba(255,255,255,.2); background:#222934;
+      box-shadow:0 0 0 10px rgba(255,255,255,.02), inset 0 0 28px rgba(255,255,255,.05);
+    }
+    .lamp[data-kind="conflict"], .lamp[data-kind="failure"] { background:#b14f54; box-shadow:0 0 34px rgba(177,79,84,.5); }
+    .lamp[data-kind="alternative"], .lamp[data-kind="novel"], .lamp[data-kind="look"] { background:#d5ad55; box-shadow:0 0 34px rgba(213,173,85,.45); }
+    .lamp[data-kind="success"] { background:#63b881; box-shadow:0 0 34px rgba(99,184,129,.45); }
+    .lamp[data-kind="notice"], .lamp[data-kind="need"], .lamp[data-kind="repeat"], .lamp[data-kind="unresolved"] { background:#6c8fc3; box-shadow:0 0 34px rgba(108,143,195,.45); }
+    .phrase { font-size:clamp(25px,4vw,42px); letter-spacing:-.03em; margin-bottom:10px; }
+    .source-line { color:#8e9aa6; font-size:13px; }
+    .controls { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+    button, .file-label {
+      appearance:none; border:1px solid rgba(255,255,255,.14); color:#eef3f8; background:rgba(255,255,255,.055);
+      border-radius:10px; padding:10px 12px; font:inherit; cursor:pointer;
+    }
+    button:hover, .file-label:hover { background:rgba(255,255,255,.09); }
+    input[type=file] { display:none; }
+    .truth-note { margin-top:14px; color:#8f9ca9; font-size:12px; line-height:1.5; }
+    .kv { display:grid; grid-template-columns:130px 1fr; gap:9px 12px; font-size:13px; margin-bottom:18px; }
+    .kv dt { color:#8693a0; }
+    .kv dd { margin:0; overflow-wrap:anywhere; }
+    .section-title { margin:20px 0 8px; font-size:12px; color:#9eabb8; letter-spacing:.09em; text-transform:uppercase; }
+    .refs { display:flex; flex-wrap:wrap; gap:7px; }
+    .ref { padding:6px 8px; border-radius:8px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); font:12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .map { display:grid; gap:10px; }
+    .relation { border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:10px; background:rgba(255,255,255,.025); font:12px ui-monospace, SFMono-Regular, Menlo, monospace; line-height:1.5; overflow-wrap:anywhere; }
+    .empty { color:#82909e; font-size:13px; }
+    .status { display:inline-flex; align-items:center; gap:7px; border-radius:999px; padding:6px 9px; background:rgba(255,255,255,.05); font-size:12px; }
+    .dot { width:7px; height:7px; border-radius:50%; background:#d5ad55; }
+    .error { display:none; margin-top:12px; border:1px solid rgba(220,92,92,.35); background:rgba(220,92,92,.08); padding:10px 12px; border-radius:10px; color:#f1b3b3; font-size:13px; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; color:#aeb9c5; margin:0; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="topline">
+    <span class="badge truth">offline / no AI / no network</span>
+    <span class="badge demo" id="modeBadge">bundled demo</span>
+  </div>
+  <h1>Machine Voice</h1>
+  <p class="subtitle">A local test surface for grounded Machine Floor communication. The phrase is only a pointer; the packet, evidence and proposal structure remain inspectable underneath.</p>
+
+  <div class="grid">
+    <section class="panel">
+      <div class="panel-head">FloorVoice</div>
+      <div class="panel-body voice">
+        <div>
+          <div class="lamp" id="lamp"></div>
+          <div class="phrase" id="phrase">Look here.</div>
+          <div class="source-line" id="sourceLine">Source: bundled example — not a live Machine Floor event</div>
+          <div class="controls">
+            <button id="demoButton" type="button">Load bundled demo</button>
+            <label class="file-label" for="packetFile">Open packet JSON</label>
+            <input id="packetFile" type="file" accept="application/json,.json">
+          </div>
+          <div id="error" class="error"></div>
+          <div class="truth-note">Truth boundary: this page never invents a phrase from free text. It renders only the fixed phrase mapped to <code>packet.kind</code>. Loaded data is shown as supplied and is not declared true merely because it renders.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">StateTalk packet</div>
+      <div class="panel-body">
+        <dl class="kv" id="summary"></dl>
+
+        <div class="section-title">Evidence</div>
+        <div class="refs" id="evidence"></div>
+
+        <div class="section-title">Subjects</div>
+        <div class="refs" id="subjects"></div>
+
+        <div class="section-title">Proposal map</div>
+        <div id="proposalStatus"></div>
+        <div class="map" id="proposalMap"></div>
+
+        <div class="section-title">Canonical packet</div>
+        <pre id="raw"></pre>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const PROTOCOL = "axm-machine-voice/local-bridge/0.1";
+  const FLOORVOICE = Object.freeze({
+    notice: "I noticed something.",
+    conflict: "These do not fit.",
+    alternative: "There is another way.",
+    unresolved: "I cannot resolve this.",
+    need: "I need something.",
+    repeat: "This happened before.",
+    novel: "This is new.",
+    success: "This worked.",
+    failure: "This did not work.",
+    look: "Look here."
+  });
+
+  const demoPacket = {
+    version: "0.1",
+    event_id: "local-demo-001",
+    kind: "alternative",
+    source: { kind: "machine-floor", id: "local-demo" },
+    subjects: [
+      { kind: "state", id: "current-path" },
+      { kind: "state", id: "candidate-path" }
+    ],
+    claim: {
+      predicate: "alternative_path_preserves_constraint",
+      arguments: [
+        { kind: "state", id: "current-path" },
+        { kind: "state", id: "candidate-path" }
+      ],
+      value: true
+    },
+    evidence: [
+      { kind: "evidence", id: "bundled-demo-proof" }
+    ],
+    relevance: [
+      { kind: "activity", id: "monolith-local-test" }
+    ],
+    next_operations: ["inspect", "compare"],
+    fingerprint: "demo-only-not-a-live-semantic-fingerprint",
+    proposal_map: {
+      nodes: [
+        { kind: "state", id: "current-path" },
+        { kind: "state", id: "candidate-path" },
+        { kind: "constraint", id: "preserved" },
+        { kind: "evidence", id: "bundled-demo-proof" }
+      ],
+      relations: [
+        {
+          source: { kind: "state", id: "candidate-path" },
+          predicate: "preserves",
+          target: { kind: "constraint", id: "preserved" }
+        },
+        {
+          source: { kind: "state", id: "candidate-path" },
+          predicate: "supported_by",
+          target: { kind: "evidence", id: "bundled-demo-proof" }
+        }
+      ],
+      status: "untested"
+    },
+    metadata: {
+      source_mode: "bundled_demo",
+      truth_note: "Demonstrates the renderer only. It is not a live discovery."
+    }
+  };
+
+  const el = id => document.getElementById(id);
+  const refText = ref => `${String(ref?.kind ?? "unknown")}:${String(ref?.id ?? "unknown")}`;
+
+  function validatePacket(packet) {
+    if (!packet || typeof packet !== "object") throw new Error("Packet must be an object.");
+    if (!FLOORVOICE[packet.kind]) throw new Error(`Unknown FloorVoice kind: ${String(packet.kind)}`);
+    if (!packet.source || !packet.source.kind || !packet.source.id) throw new Error("Packet source is missing or malformed.");
+    if (!Array.isArray(packet.subjects)) throw new Error("Packet subjects must be an array.");
+    if (!Array.isArray(packet.evidence)) throw new Error("Packet evidence must be an array.");
+    if (!Array.isArray(packet.next_operations)) throw new Error("Packet next_operations must be an array.");
+    return packet;
+  }
+
+  function chips(target, refs) {
+    target.innerHTML = "";
+    if (!refs || refs.length === 0) {
+      target.innerHTML = '<span class="empty">None supplied.</span>';
+      return;
+    }
+    for (const ref of refs) {
+      const span = document.createElement("span");
+      span.className = "ref";
+      span.textContent = refText(ref);
+      target.appendChild(span);
+    }
+  }
+
+  function row(label, value) {
+    const dt = document.createElement("dt");
+    const dd = document.createElement("dd");
+    dt.textContent = label;
+    dd.textContent = value;
+    el("summary").append(dt, dd);
+  }
+
+  function render(packet, sourceMode) {
+    validatePacket(packet);
+    el("error").style.display = "none";
+    el("lamp").dataset.kind = packet.kind;
+    el("phrase").textContent = FLOORVOICE[packet.kind];
+    el("modeBadge").textContent = sourceMode === "demo" ? "bundled demo" : "loaded packet";
+    el("sourceLine").textContent = sourceMode === "demo"
+      ? "Source: bundled example — not a live Machine Floor event"
+      : "Source: locally supplied packet — authenticity/truth depends on its producer and evidence";
+
+    el("summary").innerHTML = "";
+    row("Protocol version", String(packet.version ?? "unknown"));
+    row("Event", String(packet.event_id ?? "unknown"));
+    row("Kind", String(packet.kind));
+    row("Source", refText(packet.source));
+    row("Claim", String(packet.claim?.predicate ?? "none"));
+    row("Next operations", Array.isArray(packet.next_operations) ? packet.next_operations.join(", ") : "none");
+    row("Fingerprint", String(packet.fingerprint ?? "not supplied"));
+
+    chips(el("evidence"), packet.evidence);
+    chips(el("subjects"), packet.subjects);
+
+    const proposal = packet.proposal_map;
+    el("proposalMap").innerHTML = "";
+    el("proposalStatus").innerHTML = "";
+    if (!proposal) {
+      el("proposalStatus").innerHTML = '<span class="empty">No proposal map supplied.</span>';
+    } else {
+      const status = document.createElement("span");
+      status.className = "status";
+      status.innerHTML = `<span class="dot"></span>${String(proposal.status ?? "unknown")}`;
+      el("proposalStatus").appendChild(status);
+      for (const relation of proposal.relations ?? []) {
+        const item = document.createElement("div");
+        item.className = "relation";
+        item.textContent = `${refText(relation.source)}\n  └─ ${String(relation.predicate)} → ${refText(relation.target)}`;
+        el("proposalMap").appendChild(item);
+      }
+      if (!(proposal.relations ?? []).length) {
+        el("proposalMap").innerHTML = '<span class="empty">Map contains no relations.</span>';
+      }
+    }
+
+    el("raw").textContent = JSON.stringify(packet, null, 2);
+  }
+
+  function showError(error) {
+    el("error").textContent = error instanceof Error ? error.message : String(error);
+    el("error").style.display = "block";
+  }
+
+  el("demoButton").addEventListener("click", () => render(demoPacket, "demo"));
+  el("packetFile").addEventListener("change", async event => {
+    try {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const packet = JSON.parse(await file.text());
+      render(packet, "local");
+    } catch (error) {
+      showError(error);
+    } finally {
+      event.target.value = "";
+    }
+  });
+
+  window.addEventListener("message", event => {
+    const message = event.data;
+    if (!message || message.protocol !== PROTOCOL || message.type !== "load-packet") return;
+    try {
+      render(message.packet, "local");
+      event.source?.postMessage?.({ protocol: PROTOCOL, type: "packet-rendered", event_id: message.packet?.event_id ?? null }, "*");
+    } catch (error) {
+      showError(error);
+    }
+  });
+
+  if (window.parent !== window) {
+    window.parent.postMessage({ protocol: PROTOCOL, type: "ready", version: "0.1" }, "*");
+  }
+
+  render(demoPacket, "demo");
+})();
+</script>
+</body>
+</html>
