@@ -69,7 +69,7 @@ class BoundedNeedProducerTests(unittest.TestCase):
         second_decision = evaluate(second, GateContext(active_refs=(self.activity,)))
         self.assertEqual(first_decision.fingerprint, second_decision.fingerprint)
 
-    def test_reordering_required_and_available_state_is_stable(self):
+    def test_reordering_required_inventory_and_evidence_is_stable(self):
         first = produce_bounded_need(
             event_id="need-a",
             source=self.floor,
@@ -77,7 +77,12 @@ class BoundedNeedProducerTests(unittest.TestCase):
             task=self.task,
             inventory_scope=self.scope,
             required_inputs=(self.config, self.state),
-            available_inputs=(self.available(self.config, "config-proof"),),
+            available_inputs=(
+                AvailableInputState(
+                    ref=self.config,
+                    evidence=(Ref("evidence", "config-b"), Ref("evidence", "config-a")),
+                ),
+            ),
             inventory_evidence=(Ref("evidence", "inventory-b"), Ref("evidence", "inventory-a")),
         )
         second = produce_bounded_need(
@@ -87,7 +92,12 @@ class BoundedNeedProducerTests(unittest.TestCase):
             task=self.task,
             inventory_scope=self.scope,
             required_inputs=(self.state, self.config),
-            available_inputs=(self.available(self.config, "config-proof"),),
+            available_inputs=(
+                AvailableInputState(
+                    ref=self.config,
+                    evidence=(Ref("evidence", "config-a"), Ref("evidence", "config-b")),
+                ),
+            ),
             inventory_evidence=(Ref("evidence", "inventory-a"), Ref("evidence", "inventory-b")),
         )
         first_decision = evaluate(first, GateContext(active_refs=(self.activity,)))
