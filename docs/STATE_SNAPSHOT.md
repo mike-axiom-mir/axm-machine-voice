@@ -9,6 +9,7 @@ axm-machine-voice/alternative-snapshot/0.1
 axm-machine-voice/conflict-snapshot/0.1
 axm-machine-voice/unresolved-snapshot/0.1
 axm-machine-voice/need-snapshot/0.1
+axm-machine-voice/residual-snapshot/0.1
 ```
 
 Complete examples:
@@ -18,6 +19,7 @@ examples/alternative_snapshot.example.json
 examples/conflict_snapshot.example.json
 examples/unresolved_snapshot.example.json
 examples/need_snapshot.example.json
+examples/residual_snapshot.example.json
 ```
 
 Portable JSON Schema descriptions live under `schemas/` with matching names.
@@ -83,35 +85,11 @@ A surfaced packet keeps:
 
 ## Bounded need snapshot
 
-```json
-{
-  "schema": "axm-machine-voice/need-snapshot/0.1",
-  "event_id": "event-004",
-  "source": {"kind": "machine-floor", "id": "main"},
-  "activity": {"kind": "activity", "id": "current-work"},
-  "task": {"kind": "task", "id": "build-proof"},
-  "inventory_scope": {"kind": "inventory-scope", "id": "current-run"},
-  "required_inputs": [],
-  "available_inputs": [],
-  "inventory_evidence": [],
-  "next_operations": ["inspect"]
-}
-```
+The need snapshot names a task, bounded inventory scope, explicit required inputs, available inputs, and inventory evidence.
 
-Each available input has exactly:
+It can emit only when one or more explicitly required inputs are absent from the supplied inventory. If every required input is present, the result is normal `no_candidate` silence.
 
-```json
-{
-  "ref": {"kind": "input", "id": "..."},
-  "evidence": [{"kind": "evidence", "id": "..."}]
-}
-```
-
-The bounded-need producer can emit only when one or more explicitly required input references are absent from the named supplied inventory.
-
-If every required input is present, the result is normal `no_candidate` silence.
-
-A surfaced packet preserves:
+A surfaced packet keeps:
 
 ```json
 {
@@ -120,7 +98,55 @@ A surfaced packet preserves:
 }
 ```
 
-So `I need something.` means only that the supplied bounded inventory lacks an explicitly required input. It never means that input is unavailable elsewhere, and the adapter does not infer hidden requirements.
+## Residual snapshot
+
+```json
+{
+  "schema": "axm-machine-voice/residual-snapshot/0.1",
+  "event_id": "event-005",
+  "source": {"kind": "machine-floor", "id": "main"},
+  "activity": {"kind": "activity", "id": "current-work"},
+  "checks": [],
+  "next_operations": ["inspect", "compare"]
+}
+```
+
+Each residual check explicitly supplies:
+
+```text
+ref
+subject
+property
+metric
+expected numeric value
+observed numeric value
+non-negative tolerance
+expected evidence
+observed evidence
+tolerance evidence
+```
+
+It can emit only when at least one supplied check satisfies:
+
+```text
+abs(observed - expected) > tolerance
+```
+
+Within tolerance, exactly at tolerance, or an empty check set are normal `no_candidate` silence.
+
+A surfaced packet does not infer an explanation and preserves:
+
+```json
+{
+  "cause": null,
+  "cause_claimed": false,
+  "novelty_claimed": false,
+  "model_invalidity_claimed": false,
+  "observation_invalidity_claimed": false
+}
+```
+
+So `Look here.` means only that the supplied expected/observed comparison exceeded its supplied tolerance under its supplied metric.
 
 ## Shared reference object
 
@@ -134,7 +160,7 @@ No adapter infers aliases or hidden equivalence between differently named refere
 
 ## Outcomes
 
-All four adapters return the same `SnapshotOutcome` states:
+All five adapters return the same `SnapshotOutcome` states:
 
 - `emitted` — a candidate survived its exact producer and the communication gate;
 - `no_candidate` — the supplied state contains nothing that producer is allowed to say;
@@ -157,6 +183,7 @@ process_alternative_snapshot(...)
 process_conflict_snapshot(...)
 process_unresolved_snapshot(...)
 process_need_snapshot(...)
+process_residual_snapshot(...)
 ```
 
 `SNAPSHOT_SCHEMA` remains an alias for the original alternative schema for backward compatibility.
@@ -166,7 +193,7 @@ process_need_snapshot(...)
 The same zero-install command accepts all supported snapshots:
 
 ```bash
-python machine_voice.py snapshot examples/need_snapshot.example.json \
+python machine_voice.py snapshot examples/residual_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
@@ -178,14 +205,14 @@ Any supported snapshot can drive the same offline renderer:
 
 ```bash
 python examples/build_local_monolith_proof.py \
-  --snapshot examples/need_snapshot.example.json \
+  --snapshot examples/residual_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
-Rendering proves the handoff path worked. It does not prove the external source or evidence was truthful.
+Rendering proves the handoff path worked. It does not prove the external source, evidence, expected model, observation, or tolerance was truthful/correct.
 
 ## Truth boundary
 
-The snapshot layer does not infer missing evidence, hidden constraints/requirements, metric meaning, assertion aliases, which side of a conflict is true, global impossibility from a bounded search, global unavailability from a bounded inventory, source authenticity, or active relevance.
+The snapshot layer does not infer missing evidence, hidden constraints/requirements, metric meaning, assertion aliases, which side of a conflict is true, global impossibility from a bounded search, global unavailability from a bounded inventory, cause/novelty/model invalidity/observation invalidity from a residual, source authenticity, or active relevance.
 
 A future snapshot format that needs more meaning must use an explicit schema revision. Do not add fields and expect older readers to ignore them.
