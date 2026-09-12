@@ -15,7 +15,7 @@ The channel is deterministic, local, standard-library-only, and emits exactly on
 One command accepts every explicitly supported snapshot schema:
 
 ```bash
-python machine_voice.py snapshot examples/history_snapshot.example.json \
+python machine_voice.py snapshot examples/notice_snapshot.example.json \
   --active-ref activity:local-monolith-proof
 ```
 
@@ -29,16 +29,17 @@ axm-machine-voice/need-snapshot/0.1
 axm-machine-voice/residual-snapshot/0.1
 axm-machine-voice/outcome-snapshot/0.1
 axm-machine-voice/history-snapshot/0.1
+axm-machine-voice/notice-snapshot/0.1
 ```
 
-Routing is based only on the explicit `schema` id. Unsupported ids fail closed. The history schema is handled by an additive wrapper; every older schema delegates unchanged to the earlier proven router.
+Routing is based only on the explicit `schema` id. Unsupported ids fail closed. History and notice are handled by a thin additive wrapper; the original six schemas still delegate unchanged to the earlier proven router.
 
 Snapshots may also be piped over stdin. `--active-ref` stays outside the snapshot so a snapshot cannot certify its own relevance.
 
 Repeated `--seen-fingerprint` arguments suppress already-emitted semantics. A communication journal can provide prior fingerprints automatically:
 
 ```bash
-python machine_voice.py snapshot examples/history_novel_snapshot.example.json \
+python machine_voice.py snapshot examples/notice_snapshot.example.json \
   --active-ref activity:local-monolith-proof \
   --journal local/communication.jsonl
 ```
@@ -49,7 +50,7 @@ Only newly emitted communication is appended.
 
 ```bash
 python machine_voice.py respond local/communication.jsonl \
-  --event-id history-snapshot-novel-001 \
+  --event-id notice-snapshot-example-001 \
   --actor human:local-user \
   --action inspect
 ```
@@ -89,6 +90,7 @@ process_need_snapshot(...)
 process_residual_snapshot(...)
 process_outcome_snapshot(...)
 process_history_snapshot(...)
+process_notice_snapshot(...)
 ```
 
 Journal-aware runtimes can additionally use `append_emission`, `append_response`, `emitted_fingerprints`, and `read_journal`.
@@ -110,9 +112,9 @@ The snapshot cannot select a different aggregation rule.
 The machine channel also does not add recurrence/novelty semantics. It transports the paired history producer's bounded rule:
 
 ```text
-exact grounded prior match                    → emitted repeat
-no exact match + complete_for_domain true     → emitted novel
-no exact match + incomplete history           → no_candidate
+exact grounded prior match                → emitted repeat
+no exact match + complete_for_domain true → emitted novel
+no exact match + incomplete history       → no_candidate
 ```
 
 One prior match is enough for recurrence. Absence is not enough for novelty unless the supplied scope explicitly claims completeness for that domain.
@@ -128,8 +130,35 @@ The history transport preserves explicit denials including:
 }
 ```
 
+## Notice behavior
+
+The machine channel adds no meaning to the generic notice phrase either. It transports only the explicit detector result:
+
+```text
+triggered = false → no_candidate
+triggered = true  → grounded notice candidate → normal gate
+```
+
+A notice packet explicitly keeps interpretation out of the machine channel:
+
+```json
+{
+  "cause": null,
+  "cause_claimed": false,
+  "importance_claimed": false,
+  "anomaly_claimed": false,
+  "novelty_claimed": false,
+  "success_claimed": false,
+  "failure_claimed": false,
+  "recommendation_claimed": false,
+  "interpretation_claimed": false
+}
+```
+
+So the CLI cannot upgrade “this explicit notice rule fired” into importance, anomaly, novelty, cause, success, failure, recommendation, or another interpretation.
+
 ## Truth boundary
 
-The machine channel does not authenticate snapshot creators or response actors, prove evidence true, choose which side of a conflict is correct, turn a bounded unresolved search into global impossibility, turn a bounded inventory miss into global unavailability, turn a residual into a cause/novelty/model-failure claim, turn criteria-relative success/failure into a global value judgment, authenticate criteria-contract authorship or pre-attempt timing, turn absence in incomplete history into novelty, authenticate history completeness/ordering, turn bounded history absence into global/scientific novelty, make proposals canonical, execute proposal contents, generate explanatory prose, or convert invalid state into a plausible guess.
+The machine channel does not authenticate snapshot creators or response actors, prove evidence true, choose which side of a conflict is correct, turn a bounded unresolved search into global impossibility, turn a bounded inventory miss into global unavailability, turn a residual into a cause/novelty/model-failure claim, turn criteria-relative success/failure into a global value judgment, authenticate criteria-contract authorship or pre-attempt timing, turn absence in incomplete history into novelty, authenticate history completeness/ordering, turn bounded history absence into global/scientific novelty, turn a generic notice trigger into importance/anomaly/novelty/cause/success/failure/recommendation/interpretation, make proposals canonical, execute proposal contents, generate explanatory prose, or convert invalid state into a plausible guess.
 
 Its job is narrower: preserve one deterministic versioned route from supplied state to canonical Machine Voice output, grounded silence/rejection, or an explicit structured interaction record.
