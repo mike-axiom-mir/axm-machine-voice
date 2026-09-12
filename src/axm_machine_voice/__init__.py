@@ -18,6 +18,14 @@ from .core import (
     render_floorvoice,
     semantic_fingerprint,
 )
+from .journal import (
+    JOURNAL_PROTOCOL,
+    append_emission,
+    append_response,
+    emitted_event_ids,
+    emitted_fingerprints,
+    read_journal,
+)
 from .producer import OptionState, produce_lower_cost_alternative
 from .snapshot import SNAPSHOT_SCHEMA, SnapshotOutcome, outcome_dict, process_alternative_snapshot
 
@@ -28,6 +36,7 @@ __all__ = [
     "FLOORVOICE",
     "GateContext",
     "GateDecision",
+    "JOURNAL_PROTOCOL",
     "JsonlEventLog",
     "OptionState",
     "ProposalMap",
@@ -37,13 +46,18 @@ __all__ = [
     "SNAPSHOT_SCHEMA",
     "SnapshotOutcome",
     "StateTalkPacket",
+    "append_emission",
+    "append_response",
     "canonical_json",
     "emit",
+    "emitted_event_ids",
+    "emitted_fingerprints",
     "evaluate",
     "outcome_dict",
     "packet_dict",
     "process_alternative_snapshot",
     "produce_lower_cost_alternative",
+    "read_journal",
     "render_floorvoice",
     "semantic_fingerprint",
 ]
